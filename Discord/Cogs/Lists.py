@@ -98,6 +98,18 @@ class Lists(MyCog):
             for_all_countries, list_items().items['units'][name], count
         )
 
+    @edit_inventory_build.on_autocomplete('name')
+    async def edit_inv_build_autocomplete(self, inter: Interaction, name: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_items(list_items().items['builds'], name)
+        )
+    @edit_inventory_unit.on_autocomplete('name')
+    async def edit_inv_unit_autocomplete(self, inter: Interaction, name: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_items(list_items().items['units'], name)
+        )
+
+
     _DELETE_INVENTORY_ITEM_PARAMETERS = {
             'name': SlashOption(
                 name='имя',
@@ -114,7 +126,7 @@ class Lists(MyCog):
     ):
         await delete_item_inventory(
                 inter, self, 'build', player, 
-                for_all_countries, list_items().items['builds'][name]
+                for_all_countries, list_items().deletable_items['builds'][name]
         )
 
     @application_checks.check(MyCog.curators_perf)
@@ -127,17 +139,15 @@ class Lists(MyCog):
     ):
         await delete_item_inventory(
                 inter, self, 'build', player, 
-                for_all_countries, list_items().items['units'][name]
+                for_all_countries, list_items().deletable_items['units'][name]
         )
 
-    @edit_inventory_build.on_autocomplete('name')
     @delete_inventory_build.on_autocomplete('name')
-    async def inv_build_autocomplete(self, inter: Interaction, name: str):
+    async def del_inv_build_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
                 list_items().get_same_items(list_items().deletable_items['builds'], name)
         )
 
-    @edit_inventory_unit.on_autocomplete('name')
     @delete_inventory_unit.on_autocomplete('name')
     async def inv_unit_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
