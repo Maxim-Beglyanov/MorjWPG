@@ -3,11 +3,13 @@ if __name__ == '__main__':
 from typing import Any
 
 from Database.Database import database
-from Service.Country import Country
+from Service.default import _ALL
+from Service.Country import AllCountries, Country, OneCountry
 from Service.Items import ItemFabric, Item
 from Service.exceptions import OperationOnlyForOneCountry
 
-
+_ALL_ITEMS = _ALL
+_ALL_COUNTRIES = _ALL
 class List:
     """Класс списков, которые использует предметы"""
     item: Item
@@ -39,8 +41,7 @@ class Inventory(List):
         self.country = country
 
     def get_inventory(self) -> dict[str, dict[str, Any]]:
-        if self.country.len_ != 1:
-            raise OperationOnlyForOneCountry
+        assert self.country.len_ == 1
 
         inventory = {}
 
@@ -54,7 +55,7 @@ class Inventory(List):
         return inventory
 
     def edit_inventory(self, item_id: int, count: int):
-        if self.country.len_ == -1:
+        if self.country.len_ == _ALL_COUNTRIES:
             countries = database().select('SELECT country_id '
                                           'FROM countries')
             values = []
@@ -78,23 +79,25 @@ class Inventory(List):
                           f'SET count = {item_inventory}.count+%s', count)
     
     def delete_inventory_item(self, item_id: int):
-        if self.country.where:
-            where = (f'{self.country.where} AND {self.item.arguments_name}_id = '
-                     f'{item_id}')
+        if self.country.len_ == _ALL_COUNTRIES:
+            country_where = True
         else:
-            where = f'WHERE {self.item.arguments_name}_id = {item_id}'
+            country_where = []
+            for id_ in self.country.id_:
+                country_where.append(str(id_))
 
-        database().insert(f'DELETE FROM {self.item.table_name}_inventory '
-                          + where)
+            country_where = ', '.join(country_where)
+            country_where = f'country_id IN ({country_where})'
 
-    def delete_inventory(self):
-        item_inventory = f'{self.item.table_name}_inventory'
-
-        if self.country.len_ == -1:
-            database().insert(f'TRUNCATE TABLE {item_inventory}')
+        if item_id == _ALL_ITEMS:
+            item_where = True
         else:
-            database().insert(f'DELETE FROM {item_inventory}'
-                              + self.country.where)
+            item_where = f'{self.item.arguments_name}_id = {item_id}'
+
+        where = f'WHERE {country_where} AND {item_where}'
+
+        database().insert(f'DELETE FROM {self.item.table_name}_inventory '+ where)
+
 
 class ListFabric:
     """Класс фабрики создания списков"""
@@ -111,5 +114,7 @@ class InventoryFabric(ListFabric):
 
 
 if __name__ == '__main__':
-    shop = ShopFabric().get_shop('build')
-    print(shop.get_shop())
+    country = AllCountries()
+    inventory = InventoryFabric().get_inventory(country, 'build')
+
+    inventory.delete_inventory_item(-1)

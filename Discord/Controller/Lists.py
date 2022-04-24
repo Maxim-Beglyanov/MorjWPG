@@ -61,17 +61,6 @@ async def delete_item_inventory(
 
     await cog.send(inter, 'Delete Item Inventory', 'Предмет удален из инвентаря')
 
-async def delete_inventory(
-        inter: Interaction, cog: MyCog, item_type: str,
-        user: Member, for_all_countries: bool
-):
-    country = await get_country_parameters(inter, cog, user, for_all_countries)
-    inventory = InventoryFabric().get_inventory(country, item_type)
-
-    inventory.delete_inventory()
-
-    await cog.send(inter, 'Delete Inventory', 'Инвентарь удален')
-
 
 _ITEMS_PARAMTERS = {
     'price': 'Цена',
