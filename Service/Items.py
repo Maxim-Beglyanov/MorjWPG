@@ -2,13 +2,14 @@ if __name__ == '__main__':
     import sys; sys.path.append('..')
 from abc import ABC, abstractmethod
 from typing import Any
+import copy
 
 from psycopg2._psycopg import cursor
 
 from Service.default import _ALL
 from Database.Database import database
 from Service.Country import Country
-from Service.exceptions import CantTransact, NoItem
+from Service.exceptions import CantTransact, NoItem, ParametersError
 
 
 _ALL_ITEMS = _ALL
@@ -46,9 +47,28 @@ class Item(ABC):
         )['id']
 
         self._insert_needed_for_purchase_item(item_id, needed_for_purchase)
-                    
 
-    def update(self, item_id: int, parameters: dict[str, Any]):
+    @staticmethod                
+    def group(func):
+        def decorator(self, *args, **kwargs):
+            if 'item_id' in kwargs and (item_id := kwargs.pop('item_id')):
+                func(self, *args, **kwargs, item_id=item_id)
+            elif 'group' in kwargs and (group := kwargs.pop('group')):
+                for item in database().select(
+                    f'SELECT {self.arguments_name}_id AS id '
+                    f'FROM {self.table_name} '
+                     'WHERE group_item = %s',
+                     group
+                ):
+                    copy_kwargs = copy.deepcopy(kwargs)
+                    func(self, *args, **copy_kwargs, item_id=item['id'])
+            else:
+                raise ParametersError
+
+        return decorator
+
+    @group
+    def update(self, *, item_id: int=None, group: str=None, parameters: dict[str, Any]):
         """
         Обновление одного предмета
         Во входящее значение должен входить словарь типа `параметр: значение`
@@ -176,8 +196,9 @@ class Item(ABC):
                      'VALUES(%s, %s) ',
                      group_id, needed_for_purchase_id
                 )
-                    
-    def delete(self, item_id: int=_ALL_ITEMS):
+    
+    @group
+    def delete(self, *, item_id: int=None, group: str=None):
         """
         Удалить предмет по его id
 
@@ -245,6 +266,23 @@ class Item(ABC):
             saleable_items[item['name']] = item['id']
 
         return saleable_items
+
+
+    def get_groups(self) -> list[str]:
+        """
+        Возвращает имена групп предмета
+
+        """
+
+        groups = []
+        for group in database().select(
+            f'SELECT DISTINCT group_item AS group '
+            f'FROM {self.table_name}'
+        ):
+            groups.append(group['group'])
+
+        return groups
+
 
     @abstractmethod
     def buy(self, country: Country, item_id: int, count: int):
@@ -720,13 +758,4 @@ class ItemFabric:
 
 if __name__ == '__main__':
     item = Build()
-    item.update(
-        10,
-        {'needed_for_purchase': 
-            {'parameters': {'should_not_be': True},
-             'needed_for_purchase': [{'needed_build_id': 9, 'count': 2, 'proportionally_items': True}, ],
-             'groups': [{'parameters': {'type': 'Any'}, 'needed_for_purchase': [{'needed_build_id': 11, 'count': 5}], 'groups': []}]
-             }
-            }
-        )
-
+    item.delete(item_id=5) 

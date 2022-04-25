@@ -176,11 +176,39 @@ class CogItems(MyCog):
              'needed_for_purchase': needed_for_purchase}
         )
 
+    @add_build.on_autocomplete('group')
+    async def add_build_autocomplete(self, inter: Interaction, group: str):
+        groups = list_items().groups['builds'].copy()
+        if group:
+            groups.append(group)
+
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(groups, group)
+        )
+
+    @add_unit.on_autocomplete('group')
+    async def add_unit_autocomplete(self, inter: Interaction, group: str):
+        groups = list_items().groups['units'].copy()
+        if group:
+            groups.append(group)
+
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(groups, group)
+        )
+
 
     _UPDATE_PARAMETERS = {
         'name': SlashOption(
             name='имя',
-            description='Имя изменяемого предмета'
+            description='Имя изменяемого предмета',
+            required=False,
+            default=None
+        ),
+        'group': SlashOption(
+            name='группа',
+            description='Имя группы к которой будет применено изменение',
+            required=False,
+            default=None
         ),
         'new_name': SlashOption(
             name='новое-имя',
@@ -233,6 +261,7 @@ class CogItems(MyCog):
     async def update_build(
             self, inter: Interaction,
             name: str = _UPDATE_PARAMETERS['name'],
+            group: str = _UPDATE_PARAMETERS['group'],
             new_name: str = _UPDATE_PARAMETERS['new_name'],
             new_price: float = _UPDATE_PARAMETERS['new_price'],
             new_group: str = _UPDATE_PARAMETERS['new_group'],
@@ -248,7 +277,8 @@ class CogItems(MyCog):
             new_needed_for_purchase: str = _UPDATE_PARAMETERS['new_needed_for_purchase']
     ):
         await update_item(
-                inter, self, 'build', list_items().items['builds'][name],
+                inter, self, 'build', 
+                (list_items().items['builds'][name] if name else None), group,
                 {'name': new_name,
                  'price': new_price,
                  'group_item': new_group,
@@ -265,6 +295,7 @@ class CogItems(MyCog):
     async def update_unit(
             self, inter: Interaction,
             name: str = _UPDATE_PARAMETERS['name'],
+            group: str = _UPDATE_PARAMETERS['group'],
             new_name: str = _UPDATE_PARAMETERS['new_name'],
             new_price: float = _UPDATE_PARAMETERS['new_price'],
             new_group: str = _UPDATE_PARAMETERS['new_group'],
@@ -280,7 +311,8 @@ class CogItems(MyCog):
             new_needed_for_purchase: str = _UPDATE_PARAMETERS['new_needed_for_purchase']
     ):
         await update_item(
-                inter, self, 'unit', list_items().items['units'][name],
+                inter, self, 'unit', 
+                list_items().items['units'][name] if name else None, group,
                 {'name': new_name,
                  'price': new_price,
                  'group_item': new_group,
@@ -292,46 +324,111 @@ class CogItems(MyCog):
         )
 
     @update_build.on_autocomplete('name')
-    async def update_build_autocomplete(self, inter: Interaction, name: str):
+    async def update_build_name_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
                 list_items().get_same_items(list_items().items['builds'], name)
         )
     @update_unit.on_autocomplete('name')
-    async def update_unit_autocomplete(self, inter: Interaction, name: str):
+    async def update_unit_name_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
                 list_items().get_same_items(list_items().items['units'], name)
         )
+
+    @update_build.on_autocomplete('group')
+    async def update_build_group_autocomplete(self, inter: Interaction, group: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(list_items().groups['builds'], group)
+        )
+
+    @update_unit.on_autocomplete('group')
+    async def update_unit_group_autocomplete(self, inter: Interaction, group: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(list_items().groups['units'], group)
+        )
+
+    @update_build.on_autocomplete('new_group')
+    async def update_build_new_group_autocomplete(self, inter: Interaction, new_group: str):
+        groups = list_items().groups['builds'].copy()
+        if new_group:
+            groups.append(new_group)
+
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(groups, new_group)
+        )
+
+    @update_unit.on_autocomplete('new_group')
+    async def update_unit_new_group_autocomplete(self, inter: Interaction, new_group: str):
+        groups = list_items().groups['units'].copy()
+        if new_group:
+            groups.append(new_group)
+
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(groups, new_group)
+        )
+
 
     _DELETE_PARAMETERS = {
             'name': SlashOption(
                 name='имя',
                 description=('Имя удаляемого предмета, если указать all, ' 
-                             'то удалятся все')
+                             'то удалятся все'),
+                required=False,
+                default=None
+            ),
+            'group': SlashOption(
+                name='группа',
+                description='Группа, предметы которой будут удалены',
+                required=False,
+                default=None
             )
     }
     @application_checks.check(MyCog.curators_perf)
     @slash_command(name='del-build', description='Удалить здание')
-    async def delete_build(self, inter: Interaction,
-                           name: str = _DELETE_PARAMETERS['name']
+    async def delete_build(
+            self, inter: Interaction,
+            name: str = _DELETE_PARAMETERS['name'],
+            group: str = _DELETE_PARAMETERS['group']
     ):
-        await delete_item(inter, self, 'build', list_items().deletable_items['builds'][name])
+        await delete_item(
+                inter, self, 'build', 
+                list_items().deletable_items['builds'][name] if name else None,
+                group
+        )
 
     @application_checks.check(MyCog.curators_perf)
     @slash_command(name='del-unit', description='Удалить юнита')
-    async def delete_unit(self, inter: Interaction,
-                          name: str = _DELETE_PARAMETERS['name']
+    async def delete_unit(
+            self, inter: Interaction,
+            name: str = _DELETE_PARAMETERS['name'],
+            group: str = _DELETE_PARAMETERS['group']
     ):
-        await delete_item(inter, self, 'unit', list_items().deletable_items['units'][name])
+        await delete_item(
+                inter, self, 'unit', 
+                list_items().deletable_items['units'][name] if name else None,
+                group
+        )
 
     @delete_build.on_autocomplete('name')
-    async def delete_build_autocomplete(self, inter: Interaction, name: str):
+    async def delete_build_name_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
                 list_items().get_same_items(list_items().deletable_items['builds'], name)
         )
     @delete_unit.on_autocomplete('name')
-    async def delete_unit_autocomplete(self, inter: Interaction, name: str):
+    async def delete_unit_name_autocomplete(self, inter: Interaction, name: str):
         await inter.response.send_autocomplete(
                 list_items().get_same_items(list_items().deletable_items['units'], name)
+        )
+
+    @delete_build.on_autocomplete('group')
+    async def delete_build_group_autocomplete(self, inter: Interaction, group: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(list_items().groups['builds'], group)
+        )
+
+    @delete_unit.on_autocomplete('group')
+    async def delete_unit_group_autocomplete(self, inter: Interaction, group: str):
+        await inter.response.send_autocomplete(
+                list_items().get_same_groups(list_items().groups['units'], group)
         )
 
     _BUY_PARAMETERS = {

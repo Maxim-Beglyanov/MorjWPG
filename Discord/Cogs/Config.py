@@ -182,6 +182,8 @@ class AbstractListItems(ABC):
     saleable_items: dict[str, Any]
     deletable_items: dict[str, Any]
 
+    groups: dict[str, list]
+
     @abstractmethod
     def get_all_types_items(self):
         pass
@@ -190,17 +192,25 @@ class AbstractListItems(ABC):
     def get_same_items(self, items: dict[str, int], name: str) -> list[str]:
         pass
 
+    @abstractmethod
+    def get_same_groups(self, groups: list[str], group: str) -> list[str]:
+        pass
+
 class ListItems(AbstractListItems):
     items: dict[str, Any]
     buyable_items: dict[str, Any]
     saleable_items: dict[str, Any]
     deletable_items: dict[str, Any]
 
+    groups: dict[str, list]
+
     def __init__(self):
         self.items = {}
         self.buyable_items = {}
         self.saleable_items = {}
         self.deletable_items = {}
+
+        self.groups = {}
 
         self.get_all_types_items()
 
@@ -210,6 +220,7 @@ class ListItems(AbstractListItems):
             self.get_buyable_items(item)
             self.get_saleable_items(item)
             self.get_deletable_items(item)
+            self.get_groups_items(item)
 
     def get_items(self, item_type: str):
         self.items[item_type] = ItemFabric().get_item(item_type).get_all_items()
@@ -221,14 +232,24 @@ class ListItems(AbstractListItems):
         self.deletable_items[item_type] = ItemFabric().get_item(item_type).get_all_items()
         self.deletable_items[item_type]['all'] = -1
 
-    def get_same_items(self, items: dict[str, int], name: str) -> list[str]:
-        output = []
-        name = name.lower()
-        for item in items.keys():
-            if item.lower().startswith(name):
-                output.append(item)
+    def get_groups_items(self, item_type: str):
+        self.groups[item_type] = ItemFabric().get_item(item_type).get_groups()
 
-        return output
+
+    def get_same_items(self, items: dict[str, int], name: str) -> list[str]:
+        return self.get_same_words(list(items.keys()), name)
+    
+    def get_same_groups(self, groups: list[str], group: str) -> list[str]:
+        return self.get_same_words(groups, group)
+
+    def get_same_words(self, words: list[str], looking_word: str) -> list[str]:
+        same_words = []
+        looking_word = looking_word.lower()
+        for word in words:
+            if word.lower().startswith(looking_word):
+                same_words.append(word)
+
+        return same_words
 
 v_list_items = ListItems()
 def list_items() -> AbstractListItems:

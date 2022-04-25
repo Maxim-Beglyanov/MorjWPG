@@ -34,7 +34,7 @@ async def create_item(
 @update_list_items
 async def update_item(
         inter: Interaction, cog: MyCog, item_type: str, 
-        item_id: int, parameters: dict[str, Any]
+        item_id: int, group: str, parameters: dict[str, Any]
 ):
     del_needed_for_purchase = False
     item = ItemFabric().get_item(item_type)
@@ -46,17 +46,17 @@ async def update_item(
     if del_needed_for_purchase:
         item_parameters['needed_for_purchase'] = {}
 
-    item.update(item_id, item_parameters)
+    item.update(item_id=item_id, group=group, parameters=item_parameters)
 
     await cog.send(inter, 'Update Item', 'Предмет обновлен')
 
 @update_list_items
 async def delete_item(
         inter: Interaction, cog: MyCog, 
-        item_type: str, item_id: int
+        item_type: str, item_id: int, group: str
 ):
     item = ItemFabric().get_item(item_type)
-    item.delete(item_id)
+    item.delete(item_id=item_id, group=group)
     
     await cog.send(inter, 'Delete Item', 'Предмет удален')
 

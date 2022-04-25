@@ -29,3 +29,6 @@ class CantTransact(Exception):
                 output.append('Нельзя продавать предмет')
 
         return 'Нельзя совершить транзакцию '+', '.join(output)
+
+class ParametersError(Exception):
+    pass
