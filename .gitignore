@@ -137,3 +137,6 @@ logfile
 
 .gitignore
 Desktop.ini
+
+# swap files
+*.swp
