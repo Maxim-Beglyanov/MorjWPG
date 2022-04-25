@@ -1,36 +1,59 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, NamedTuple
 import copy
 
 from psycopg2._psycopg import cursor
 
-from Service.default import _ALL
+from default import ALL
 from Database.Database import database
 from Service.Country import Country
 from Service.exceptions import CantTransact, NoItem, ParametersError
 
 
-_ALL_ITEMS = _ALL
+ALL_ITEMS = ALL
+
+class NeededForPurchaseGroupParameters(NamedTuple):
+    should_not_be: bool = None
+    type: 
+class NeededForPurchaseForm(NamedTuple):
+    item_id: int
+    needed_build_id: int
+    count: float|int
+
+    should_not_be: bool = None
+    proportionally: bool = None
+
+class NeededForPurchaseGroupForm(NamedTuple):
+    parameters: 
+    needed_for_purchases: list[NeededForPurchaseForm]
+
+class ItemParameters(NamedTuple):
+    name: str
+    price: float = None
+    description: str = None
+    group_item: str = None
+    buyability: bool = None
+    saleability: bool = None
+    needed_for_purchase: 
+
 
 class Item(ABC):
-    """
-    Интерфейс предметов, они должны выдавать имя своей таблицы, 
-    имя в аргументах, параметры предмета и выдавать класс заказа 
-    для возможности покупки
+    """Интерфейс предмета
+
+    Предмет должен предоставлять имя своей таблицы и имя для аргументов.
+    А также определять специальные способы покупки или продажи предмета
     
     """
 
     table_name: str
     arguments_name: str
     
-    def insert(self, parameters: dict[str, Any]):
-        """
-        Создание одного предмета
-        Во входящее значение должен входить словарь типа `имя_столбца: значение`
+    def insert(self, parameters: ItemParameters):
+        """Создание одного предмета в базе данных"""
 
-        """
+        parameters = parameters._asdict()
 
         needed_for_purchase = None
         if 'needed_for_purchase' in parameters:
@@ -537,53 +560,6 @@ class GroupNeededForPurchase(Component):
         self.components.remove(component)
 
     
-class Order(ABC):
-    """Класс заказа по которому строятся другие заказы"""
-
-    transact_ability: bool
-    needed_for_transact: dict[str, Any]
-
-    def __init__(self, *args):
-        self.transact_ability = True
-        self.needed_for_transact = {}
-
-        conn = database().get_conn()
-        try:
-            conn.set_isolation_level('READ COMMITTED')
-            with conn:
-                with conn.cursor() as cur:
-                    self.check_transact_ability(cur, *args)
-
-                    if self.transact_ability:
-                        self.transact(cur, *args)
-                    else:
-                        raise CantTransact(self.needed_for_transact)
-        finally:
-            database().put_conn(conn)
-
-    @abstractmethod
-    def check_transact_ability(self, *args):
-        pass
-
-    @abstractmethod
-    def transact(self, *args):
-        pass
-
-    def _check_ability(self, cur: cursor, item: Item, item_id: int, ability: str):
-        cur.execute(
-            f'SELECT {ability} '
-            f'FROM {item.table_name} '
-            f'WHERE {item.arguments_name}_id = %s',
-             (item_id, )
-        )
-        if not cur.fetchone()[0]:
-            self.transact_ability = False
-            self.needed_for_transact[ability] = False
-            return False
-
-        return True
-    
-
 class BuyOrder(Order):
     transact_ability: bool
     needed_for_transact: dict[str, Any]

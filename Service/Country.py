@@ -1,11 +1,11 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
 
-from Service.default import _ALL
+from default import ALL
 from Database.Database import database
 
 
-_ALL_COUNTRIES = _ALL
+ALL_COUNTRIES = ALL
 
 class Country:
     """
@@ -13,34 +13,52 @@ class Country:
     информацию о себе для обращения к БД
     
     """
-    len_: int
-    id_: tuple[int]
-    where: str
+
+    _count: int
+    _ids: tuple[int]
+    _where: str
+
+    @property
+    def count(self) -> int:
+        return self._count
+    @property
+    def ids(self) -> tuple[int]:
+        return self._ids
+    @property
+    def where(self) -> str:
+        return self._where
 
     def delete(self):
         database().insert(
-            'DELETE FROM countries '+self.where
+            ''.join(
+                ('DELETE FROM countries ',self.where)
+            )
         )
 
 
 class OneCountry(Country):
-    len_: int = 1
-    id_: tuple[int]
-    where: str
+    _count: int = 1
+    _ids: tuple[int]
+    _where: str
 
     def __init__(self, name: str):
-        self.id_ = database().select_one('SELECT country_id '
-                                         'FROM countries '
-                                         'WHERE name = %s', name)
-        if not self.id_:
-            self.id_ = database().select_one('INSERT INTO countries(name)'
-                                             'VALUES(%s) RETURNING country_id', 
-                                             name)
+        if not (country_ids := database().select_one(
+                'SELECT country_id '
+                'FROM countries '
+                'WHERE name = %s',
+                name
+        )):
+            country_ids = database().select_one(
+                    'INSERT INTO countries(name) '
+                    'VALUES(%s) ' 
+                    'RETURNING country_id', 
+                    name
+            )
 
-        self.id_ = (self.id_['country_id'], )
-        self.where = f'WHERE country_id = {self.id_[0]}'
+        self._ids = (country_ids['country_id'], )
+        self._where = f'WHERE country_id = {self.ids[0]}'
 
 class AllCountries(Country):
-    len_: int = _ALL_COUNTRIES
-    id_: tuple[int] = None
-    where: str = ''
+    _count: int = ALL_COUNTRIES
+    _ids: tuple[int] = None
+    _where: str = ''
