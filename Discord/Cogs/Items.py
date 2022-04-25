@@ -348,6 +348,7 @@ class CogItems(MyCog):
 
     @update_build.on_autocomplete('new_group')
     async def update_build_new_group_autocomplete(self, inter: Interaction, new_group: str):
+        print(new_group)
         groups = list_items().groups['builds'].copy()
         if new_group:
             groups.append(new_group)

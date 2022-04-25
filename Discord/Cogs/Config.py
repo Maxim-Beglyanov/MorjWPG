@@ -246,7 +246,7 @@ class ListItems(AbstractListItems):
         same_words = []
         looking_word = looking_word.lower()
         for word in words:
-            if word.lower().startswith(looking_word):
+            if word and word.lower().startswith(looking_word):
                 same_words.append(word)
 
         return same_words
