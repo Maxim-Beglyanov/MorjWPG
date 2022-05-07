@@ -76,7 +76,7 @@ class ItemLists:
         for item in items:
             words = item.split()
             word_index = 0
-            while len(' '.join(words)) > 25 and word_index < len(words):
+            while len(' '.join(words)) >= 25 and word_index < len(words):
                 vowels = list(
                         re.finditer('[уеёыаоэяиюУЕЁЫАОЭЯИЮ]', words[word_index])
                 )
@@ -85,7 +85,7 @@ class ItemLists:
 
                 word_index+=1
 
-            if len(word := ' '.join(words)) > 25:
+            if len(word := ' '.join(words)) >= 25:
                 continue
 
             items_output[word] = items[item]
