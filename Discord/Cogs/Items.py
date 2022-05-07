@@ -58,10 +58,9 @@ class ItemLists:
     def _get_items_with_all(self, item_type: str) -> dict[str, str]:
         item = ItemFabric().get_item(item_type)
         items = self._get_dict_lists(item.get_all_items())
-        items = self._cut_back_items(items)
         items['all'] = 'all'
 
-        return items
+        return self._cut_back_items(items)
     def _get_item_groups(self, item_type: str) -> dict[str, str]:
         item = ItemFabric().get_item(item_type)
         groups = self._get_dict_lists(item.get_groups_name())
@@ -76,7 +75,7 @@ class ItemLists:
         for item in items:
             words = item.split()
             word_index = 0
-            while len(' '.join(words)) >= 25 and word_index < len(words):
+            while len(' '.join(words)) >= 32 and word_index < len(words):
                 vowels = list(
                         re.finditer('[уеёыаоэяиюУЕЁЫАОЭЯИЮ]', words[word_index])
                 )
@@ -85,7 +84,7 @@ class ItemLists:
 
                 word_index+=1
 
-            if len(word := ' '.join(words)) >= 25:
+            if len(word := ' '.join(words)) >= 32:
                 continue
 
             items_output[word] = items[item]
@@ -139,6 +138,9 @@ class ItemAutocomplete:
         for same_word in words:
             if word in same_word.lower():
                 words_output[same_word] = words[same_word]
+
+        if len(words_output) > 25:
+            words_output = {'Начни вводить название': ''}
             
         return words_output
 
@@ -533,7 +535,8 @@ class CogItems(MyCog):
 
     ITEM_NAME = SlashOption(
             name='имя-предмета',
-            description='Имя предмета, который будет удален',
+            description=('Имя предмета, который будет удален, '
+                         'ты можешь ввести all, чтобы удалить все'),
             required=False,
             default=None
     )
