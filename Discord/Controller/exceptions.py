@@ -3,12 +3,11 @@ class NoItemsThatName(Exception):
         self.name = name
 
     def __str__(self) -> str:
-        return 'Предмета с именем {} нет'.format(self.name)
+        return f'Предмета с именем {self.name} нет'
 
 class WrongFormParameter(Exception):
     def __init__(self, parameter: str):
         self.parameter = parameter
     
     def __str__(self) -> str:
-        return 'Неправильно задана форма в параметре {}' \
-                .format(self.parameter)
+        return f'Неправильно задана форма в параметре {self.parameter}'

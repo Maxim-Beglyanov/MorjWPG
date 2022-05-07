@@ -1,7 +1,6 @@
 from datetime import time
 
 from nextcord import Interaction, slash_command, SlashOption
-from nextcord.ext import application_checks
 from nextcord.ext.commands import Bot
 
 from Discord.Controller.Income import get_income_times, add_income_time, delete_income_time
@@ -24,47 +23,65 @@ class CogIncome(MyCog):
 
         self.bot.loop.create_task(channel.send('Я выдал доход'))
     
-
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='income', description='Выдать доход')
-    async def get_out_income(self, inter: Interaction):
-        self.income.income()
     
-    @application_checks.check(MyCog.curators_players_perf)
-    @slash_command(name='income-times', description='Посмотреть времена выдачи дохода')
+    @MyCog.curators_and_players_perm()
+    @slash_command(
+            name='income-times',
+            description='Посмотреть времена выдачи дохода'
+    )
     async def income_times(self, inter: Interaction):
         await get_income_times(inter, self, self.income)
     
 
-    _INCOME_TIME = {
-        'hours': SlashOption(
-            name='час',
-            description='Час выдачи дохода(в МСК)',
-            min_value=0,
-            max_value=24
-        ),
-        'minutes': SlashOption(
-            name='минуты',
-            description='Минуты выдачи дохода(в МСК)',
-            min_value=0,
-            max_value=59,
+    @slash_command(name='income')
+    async def income(self, inter: Interaction):
+        pass
+
+    @MyCog.curators_perm()
+    @income.subcommand(name='get-out', description='Выдать доход')
+    async def get_out_income(self, inter: Interaction):
+        self.income.income()
+
+
+    @income.subcommand(name='edit-times')
+    async def edit_income_times(
+            self, inter: Interaction,
+            hour: int = SlashOption(
+                name='час',
+                description='Час выдачи дохода(в МСК)',
+                min_value=0,
+                max_value=24
+            ),
+            minute: int = SlashOption(
+                name='минуты',
+                description='Минуты выдачи дохода(в МСК)',
+                min_value=0,
+                max_value=59
+            )
+    ):
+        pass
+
+    @MyCog.add_parent_arguments()
+    @edit_income_times.subcommand(name='add', description='Добавить время дохода')
+    async def add_income_time(
+            self, inter: Interaction,
+            **kwargs
+    ):
+        await add_income_time(
+                inter, self, self.income, 
+                time(**kwargs)
         )
-    }
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='add-income-time', description='Добавить время дохода')
-    async def add_income_time(self, inter: Interaction,
-                              hours: int = _INCOME_TIME['hours'],
-                              minutes: int = _INCOME_TIME['minutes']
-    ):
-        await add_income_time(inter, self, self.income, time(hours, minutes))
     
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='del-income-time', description='Удалить время дохода')
-    async def delete_income_time(self, inter: Interaction,
-                                 hours: int = _INCOME_TIME['hours'],
-                                 minutes: int = _INCOME_TIME['minutes']
+    @MyCog.curators_perm()
+    @edit_income_times.subcommand(name='delete', description='Удалить время дохода')
+    async def delete_income_time(
+            self, inter: Interaction,
+            **kwargs
     ):
-        await delete_income_time(inter, self, self.income, time(hours, minutes))
+        await delete_income_time(
+                inter, self, self.income, 
+                time(**kwargs)
+        )
 
 def setup(bot: Bot):
     bot.add_cog(CogIncome(bot))

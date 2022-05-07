@@ -7,62 +7,97 @@ from nextcord import Member, Interaction
 
 from Service.Items import ItemFabric
 from Service.Lists import ShopFabric, InventoryFabric
-from Service.Country import Country, OneCountry, AllCountries
+from Service.Country import OneCountry
 from Discord.Cogs.Cog import MyCog
-from Discord.Controller.Items import get_item_id
-from Discord.Cogs.exceptions import IsntRuler
+from Discord.Controller.defaults import CountryParameters
 
 
 async def get_shop(
-        inter: Interaction, cog: MyCog, 
-        item_type: str, page: int=1
+        inter: Interaction, cog: MyCog, item_type: str, 
+        page_number: int=1
 ):
     shop = ShopFabric().get_shop(item_type)
 
     shop = shop.get_shop()
     shop = get_list(shop)
 
-    await cog.page(inter, 'Shop', inter.user, shop, page)
+    await cog.page(inter, 'Shop', shop, page_number=page_number)
 
 
 async def get_inventory(
-        inter: Interaction, cog: MyCog,
-        item_type: str, user: Member, page: int=1
+        inter: Interaction, cog: MyCog, item_type: str, 
+        player: Member, page_number: int=1
 ):
-    user = await cog.get_player(inter, user)
-    country = OneCountry(cog.get_country_name(user))
+    player = await cog.get_player(inter, player)
+
+    country = OneCountry(cog.get_country_name(player))
     inventory = InventoryFabric().get_inventory(country, item_type)
 
     inventory = inventory.get_inventory()
     inventory = get_list(inventory)
 
-    await cog.page(inter, 'Inventory', user, inventory, page)
+    await cog.page(inter, 'Inventory', inventory, player, page_number)
 
 async def edit_inventory(
         inter: Interaction, cog: MyCog, item_type: str, 
-        user: Member, for_all_countries: bool, 
-        item_id: int, count: int
+        country_parameters: CountryParameters, 
+        item_name: str, count: int
 ):
-    country = await get_country_parameters(inter, cog, user, for_all_countries)
-    inventory = InventoryFabric().get_inventory(country, item_type)
-
-    inventory.edit_inventory(item_id, count)
+    item = ItemFabric().get_item(item_type)
+    inventory = InventoryFabric().get_inventory(
+            country_parameters.as_country(inter, cog), item_type
+    )
+    inventory.edit_inventory(
+            item.get_id_by_concrete_name(item_name), 
+            count
+    )
 
     await cog.send(inter, 'Edit Inventory', 'Инвентарь был изменен')
 
 async def delete_item_inventory(
         inter: Interaction, cog: MyCog, item_type: str,
-        user: Member, for_all_countries: bool, item_id: int
+        country_parameters: CountryParameters, 
+        item_name: str
 ):
-    country = await get_country_parameters(inter, cog, user, for_all_countries)
-    inventory = InventoryFabric().get_inventory(country, item_type)
-
-    inventory.delete_inventory_item(item_id)
+    item = ItemFabric().get_item(item_type)
+    inventory = InventoryFabric().get_inventory(
+            country_parameters.as_country(inter, cog), item_type
+    )
+    inventory.delete_inventory_item(
+            item.get_id_by_concrete_name(item_name)
+    )
 
     await cog.send(inter, 'Delete Item Inventory', 'Предмет удален из инвентаря')
 
 
-_ITEMS_PARAMTERS = {
+def get_list(list_: dict[str, dict[str, Any]]) -> list[str]:
+    pages = []
+    
+    page = ''
+    exist_groups = []
+
+    count = 0
+    step = 5
+    for item in list_:
+        count+=1
+        # Добавляю группы
+        group = list_[item]['group_name'] 
+        list_[item].pop('group_name')
+        if group and not group in exist_groups:
+            exist_groups.append(group)
+            page+=f"\n> **{group}**\n"
+
+        page+=_get_item_parameters(item, list_[item])
+
+        # Если количество предметов достигает шага или это конец листа
+        if count%step == 0 or count == len(list_):
+            pages.append(page)
+
+            page = ''
+    
+    return pages
+
+ITEMS_PARAMTERS = {
     'price': 'Цена',
     'count': 'Количество',
     'description': 'Описание',
@@ -72,35 +107,11 @@ _ITEMS_PARAMTERS = {
     'saleability': 'Способность продавать',
     'needed_for_purchase': 'Необходимо для покупки'
 }
-_VALUES = {
+PARAMETERS_VALUES = {
     True: 'Можно',
     False: 'Нельзя'
 }
-def get_list(list: dict[str, dict[str, Any]]):
-    list_output = []
-    
-    item_list = ''
-    exist_groups = []
-
-    count = 0
-    step = 5
-    for item in list:
-        count+=1
-        if list[item]['group_item'] and not list[item]['group_item'] in exist_groups:
-            exist_groups.append(list[item]['group_item'])
-            item_list+=f"\n> **{list[item]['group_item']}**\n"
-        list[item].pop('group_item')
-
-        item_list+=get_item_parameters(item, list[item])
-
-        if count%step == 0 or count == len(list):
-            list_output.append(item_list)
-
-            item_list = ''
-    
-    return list_output
-
-def get_item_parameters(item_name: str, parameters: dict[str, Any]) -> str:
+def _get_item_parameters(item_name: str, parameters: dict[str, Any]) -> str:
     item = f"\n**{item_name}**\n"
 
     for parameter in parameters:
@@ -110,33 +121,8 @@ def get_item_parameters(item_name: str, parameters: dict[str, Any]) -> str:
                 # Изменяю необходимое для покупки для вывода пользователю
                 parameters[parameter] = parameters[parameter][:-2]
             else:
-                parameters[parameter] = _VALUES[parameters[parameter]]
+                parameters[parameter] = PARAMETERS_VALUES[parameters[parameter]]
 
-        item += f'{_ITEMS_PARAMTERS[parameter]}: {parameters[parameter]}\n'
+        item += f'{ITEMS_PARAMTERS[parameter]}: {parameters[parameter]}\n'
 
     return item
-
-async def get_country_parameters(inter: Interaction, cog: MyCog, 
-                                 user: Member, for_all_countries: bool) -> Country:
-    """
-    Функция для получения страны из команд по типу: 
-    /edit-money player: ... for_all_countries: ...
-    
-    """
-    
-    if user:
-        return OneCountry(cog.get_country_name(user))
-    elif for_all_countries:
-        _add_all_countries(inter, cog)
-        return AllCountries()
-    else:
-        await inter.send(':x: Ошибка параметров')
-        return
-
-def _add_all_countries(inter: Interaction, cog: MyCog):
-    for member in inter.guild.humans:
-        try:
-            cog.check_player(member)
-            OneCountry(cog.get_country_name(member))
-        except IsntRuler:
-            continue

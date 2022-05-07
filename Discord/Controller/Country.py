@@ -1,11 +1,13 @@
-from nextcord import Interaction, Member
+from nextcord import Interaction
 
-from Discord.Controller.Lists import get_country_parameters
+from Discord.Controller.defaults import CountryParameters
 from Discord.Cogs.Cog import MyCog
 
 
-async def delete_country(inter: Interaction, cog: MyCog, 
-                         user: Member, for_all_countries: bool):
-    if country := await get_country_parameters(inter, cog, user, for_all_countries):
-        country.delete()
-        await cog.send(inter, 'Delete Country', 'Я удалил страну')
+async def delete_country(
+        inter: Interaction, cog: MyCog, 
+        country_parameters: CountryParameters
+):
+    country = country_parameters.as_country(inter, cog)
+    country.delete()
+    await cog.send(inter, 'Delete Country', 'Я удалил страну')

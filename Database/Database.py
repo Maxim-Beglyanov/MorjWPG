@@ -8,7 +8,7 @@ from psycopg2.pool import AbstractConnectionPool, SimpleConnectionPool
 import psycopg2.extras
 
 
-_CURENT_DATABASE_VERSION = 1.1
+_CURENT_DATABASE_VERSION = 1.2
 class Database(ABC):
 
     @abstractmethod
