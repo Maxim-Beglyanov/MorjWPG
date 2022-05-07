@@ -10,32 +10,34 @@ from Service.Transaction import Transaction
 
 
 class Pay(Transaction):
-    """
-    Операция перевода денег одной страны другой
+    """Операция перевода денег от одной страны к другой"""
 
-    """
+    __pay_ability: bool
+    __needed_for_pay: dict[str, Any]
+
+    __new_transfer_money: float
 
     def __init__(
-        self, 
-        country_transfer: Country, country_payee: Country, 
-        money: int|float
+            self, 
+            country_transfer: Country, country_payee: Country, 
+            money: int|float
     ):
         super().__init__(country_transfer, country_payee, money)
 
 
     def _check_transact_ability(
-        self, cur: cursor, 
-        country_transfer: Country, country_payee: Country, 
-        money: int|float
-    ) -> tuple[bool, dict[str, Any]]:
+            self, cur: cursor, 
+            country_transfer: Country, country_payee: Country, 
+            money: int|float
+    ):
         assert country_transfer.count == 1 and country_payee.count == 1
 
-        self.pay_ability = True
-        self.needed_for_pay = {}
+        self.__pay_ability = True
+        self.__needed_for_pay = {}
 
         self.__check_money(cur, country_transfer, money)
 
-        return self.pay_ability, self.needed_for_pay
+        return self.__pay_ability, self.__needed_for_pay
        
     def __check_money(
             self, cur: cursor, 
@@ -47,36 +49,35 @@ class Pay(Transaction):
                 (checking_country.ids[0], money)
         )
                 
-        needed_money = cur.fetchone()[0]
-        if needed_money < 0:
-            self.pay_ability = False
-            self.needed_for_pay['money'] = needed_money
+        self.__new_transfer_money = cur.fetchone()[0]
+        if self.__new_transfer_money < 0.0:
+            self.__pay_ability = False
+            self.__needed_for_pay['money'] = self.__new_transfer_money
 
 
     def _transact(
-        self, cur: cursor, 
-        country_transfer: Country, country_payee: Country, 
-        money: int|float
+            self, cur: cursor, 
+            country_transfer: Country, country_payee: Country, 
+            money: int|float
     ):
-        self.__update_country_transfer_money(cur, country_transfer, money)
-        self.__update_country_payee_money(cur, country_payee, money)
+        self.__write_off_transfer_money(cur, country_transfer)
+        self.__give_payee_money(cur, country_payee, money)
         
-    def __update_country_transfer_money(
-        self, cur: cursor, 
-        country_transfer: Country,
-        money: int|float
+    def __write_off_transfer_money(
+            self, cur: cursor, 
+            country_transfer: Country,
     ):
         cur.execute(
                 'UPDATE countries '
-                'SET money = money - %s '
+                'SET money = %s '
                 'WHERE country_id = %s',
-                (money, country_transfer.ids[0])
+                (self.__new_transfer_money, country_transfer.ids[0])
         )
 
-    def __update_country_payee_money(
-        self, cur: cursor,
-        country_payee: Country,
-        money: int|float
+    def __give_payee_money(
+            self, cur: cursor,
+            country_payee: Country,
+            money: int|float
     ):
         cur.execute(
                 'UPDATE countries '
@@ -99,9 +100,9 @@ class Economy:
         assert self.country.count == 1
 
         return database().select_one(
-            'SELECT money '
-            'FROM countries '
-           f'{self.country.where}'
+                'SELECT money '
+                'FROM countries '
+               f'{self.country.where}'
         )['money']
 
     @property
@@ -109,8 +110,8 @@ class Economy:
         assert self.country.count == 1
 
         return database().select_one(
-            'SELECT COALESCE(get_income_country(%s), 0) AS income',
-            self.country.ids[0]
+                'SELECT COALESCE(get_income_country(%s), 0) AS income',
+                self.country.ids[0]
         )['income']
 
 
@@ -119,15 +120,15 @@ class Economy:
 
     def edit_money(self, money: int|float):
         database().insert(
-            'UPDATE countries '
-            'SET money = money + %s '
-           f'{self.country.where}', 
-            money
+                'UPDATE countries '
+                'SET money = money + %s '
+               f'{self.country.where}', 
+                money
         )
 
     def delete_money(self):
         database().insert(
-            'UPDATE countries '
-            'SET money = 0 '
-           f'{self.country.where}'
+                'UPDATE countries '
+                'SET money = 0 '
+               f'{self.country.where}'
         )

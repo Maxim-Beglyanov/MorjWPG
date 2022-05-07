@@ -1,17 +1,17 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
 
-from default import ALL
+from Service.default import ALL
 from Database.Database import database
 
 
 ALL_COUNTRIES = ALL
 
 class Country:
-    """
-    Интерфейс страны, страны должны выдавать
-    информацию о себе для обращения к БД
-    
+    """Интерфейс страны 
+
+    Страны должны выдавать информацию о себе для обращения к БД
+
     """
 
     _count: int

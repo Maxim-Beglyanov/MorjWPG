@@ -1,158 +1,202 @@
 from nextcord import Member, Interaction, slash_command, SlashOption
-from nextcord.ext import application_checks
 from nextcord.ext.commands import Bot
 
-from Discord.Controller.Lists import get_shop, get_inventory, edit_inventory, \
+from Discord.Controller.Lists import get_shop, get_inventory, \
+                                     edit_inventory, \
                                      delete_item_inventory
 from Discord.Cogs.Cog import MyCog
-from Discord.Cogs.Config import list_items
-from Discord.Cogs.Items import _ITEM_PARAMETER
+from Discord.Cogs.Items import builds_autocomplete, units_autocomplete
+from Discord.Controller.defaults import CountryParameters
 
 
 class Lists(MyCog):
-
-    @application_checks.check(MyCog.curators_players_perf)
-    @slash_command(name='shop', description='Посмотреть магазин предметов')
+    @slash_command(name='shop')
     async def shop(
-        self, inter: Interaction,
-        item_type: str = _ITEM_PARAMETER,
-        page: int = SlashOption(
-            name='страница',
-            description='Страница с которой начать просмотр магазина',
-            required=False,
-            default=1
-        )
-    ):
-        await get_shop(inter, self, item_type, page)
-    
-
-    @application_checks.check(MyCog.curators_players_perf)
-    @slash_command(name='inv', description='Просмотреть инвентарь')
-    async def inventory(
-        self, inter: Interaction,
-        item_type: str = _ITEM_PARAMETER,
-        player: Member = SlashOption(
-              name='игрок',
-              description='Игрок, чей инвентарь вы хотите увидеть',
-              required=False,
-              default=None
-        ),
-        page: int = SlashOption(
-            name='страница',
-            description='Страница, с которой вы хотите начать просмотр инвентаря',
-            required=False,
-            default=1
-        )
-    ):
-        await get_inventory(inter, self, item_type, player, page)
-
-    _INVENTORY_PARAMETERS = {
-        'name': SlashOption(
-            name='имя',
-            description='Имя предмета, который будет изменен'
-        ),
-        'count': SlashOption(
-            name='количество',
-            description='Количество добавляемого предмета',
-            required=False,
-            default=1
-        ),
-        'player': SlashOption(
-            name='игрок',
-            description='Игрок у которого будет изменен инвентарь',
-            required=False,
-            default=None
-        ),
-        'for_all_countries': SlashOption(
-            name='для-всех-стран',
-            description='Изменить инвентари всем игрокам',
-            required=False,
-            default=False
-        )
-    }
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='edit-inv-build', description='Изменить инвентарь зданий')
-    async def edit_inventory_build(
-        self, inter: Interaction,
-        name: str = _INVENTORY_PARAMETERS['name'],
-        count: int = _INVENTORY_PARAMETERS['count'],
-        player: Member = _INVENTORY_PARAMETERS['player'],
-        for_all_countries: bool = _INVENTORY_PARAMETERS['for_all_countries']
-    ):
-        await edit_inventory(
-            inter, self, 'build', player, 
-            for_all_countries, list_items().items['builds'][name], count
-        )
-
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='edit-inv-unit', description='Изменить инвентарь юнитов')
-    async def edit_inventory_unit(
-        self, inter: Interaction,
-        name: str = _INVENTORY_PARAMETERS['name'],
-        count: int = _INVENTORY_PARAMETERS['count'],
-        player: Member = _INVENTORY_PARAMETERS['player'],
-        for_all_countries: bool = _INVENTORY_PARAMETERS['for_all_countries']
-    ):
-        await edit_inventory(
-            inter, self, 'unit', player, 
-            for_all_countries, list_items().items['units'][name], count
-        )
-
-    @edit_inventory_build.on_autocomplete('name')
-    async def edit_inv_build_autocomplete(self, inter: Interaction, name: str):
-        await inter.response.send_autocomplete(
-                list_items().get_same_items(list_items().items['builds'], name)
-        )
-    @edit_inventory_unit.on_autocomplete('name')
-    async def edit_inv_unit_autocomplete(self, inter: Interaction, name: str):
-        await inter.response.send_autocomplete(
-                list_items().get_same_items(list_items().items['units'], name)
-        )
-
-
-    _DELETE_INVENTORY_ITEM_PARAMETERS = {
-            'name': SlashOption(
-                name='имя',
-                description='Имя удаляемого предмета'
+            self, inter: Interaction,
+            page_number: int = SlashOption(
+                name='страница',
+                description='Страница с которой начать просмотр магазина',
+                required=False,
+                default=1
             )
-    }
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='del-inv-build', description='Удалить здание из инвентаря')
+    ):
+        pass
+
+    @MyCog.curators_and_players_perm()
+    @MyCog.add_parent_arguments()
+    @shop.subcommand(name='builds', description='Магазин зданий')
+    async def shop_builds(
+            self, inter: Interaction,
+            **kwargs
+    ):
+        await get_shop(inter, self, 'build', **kwargs)
+
+    @MyCog.curators_and_players_perm()
+    @MyCog.add_parent_arguments()
+    @shop.subcommand(name='units', description='Магазин юнитов')
+    async def shop_units(
+            self, inter: Interaction,
+            **kwargs
+    ):
+        await get_shop(inter, self, 'unit', **kwargs)
+
+
+    @slash_command(name='inv')
+    async def inventory(
+            self, inter: Interaction,
+            player: Member = SlashOption(
+                name='игрок',
+                description='Игрок, чей инвентарь вы хотите увидеть',
+                required=False,
+                default=None
+            ),
+            page_number: int = SlashOption(
+                name='страница',
+                description='Страница, с которой вы хотите начать просмотр инвентаря',
+                required=False,
+                default=1
+            )
+    ):
+        pass
+
+    @MyCog.curators_and_players_perm()
+    @MyCog.add_parent_arguments()
+    @inventory.subcommand(name='builds', description='Инвентарь зданий')
+    async def inventory_builds(
+            self, inter: Interaction,
+            **kwargs
+    ):
+        await get_inventory(
+                inter, self, 'build',
+                **kwargs
+        )
+    
+    @MyCog.curators_and_players_perm()
+    @MyCog.add_parent_arguments()
+    @inventory.subcommand(name='units', description='Инвентарь юнитов')
+    async def inventory_units(
+            self, inter: Interaction,
+            **kwargs
+    ):
+        await get_inventory(
+                inter, self, 'unit',
+                **kwargs
+        )
+
+
+    @slash_command(name='manage-inv')
+    async def manage_inventory(self, inter: Interaction):
+        pass
+
+    @manage_inventory.subcommand(name='edit')
+    async def edit_inventory(
+            self, inter: Interaction,
+            count: int = SlashOption(
+                name='количество',
+                description='Количество добавляемого предмета',
+                required=False,
+                default=1
+            ),
+            player: Member = SlashOption(
+                name='игрок',
+                description='Игрок, у которого будет изменен инвентарь',
+                required=False,
+                default=None
+            ),
+            for_all_countries: bool = SlashOption(
+                name='для-всех-стран',
+                description='Изменить инвентари всем игрокам',
+                required=False,
+                default=False
+            )
+    ):
+        pass
+
+    ITEM_NAME = SlashOption(
+            name='имя',
+            description='Имя добавляемого предмета'
+    )
+    @MyCog.autocomplete(builds_autocomplete.items, 'item_name')
+    @MyCog.curators_perm()
+    @MyCog.add_parent_arguments()
+    @edit_inventory.subcommand(name='build', description='Изменить инвентарь зданий')
+    async def edit_inventory_build(
+            self, inter: Interaction,
+            item_name: str = ITEM_NAME,
+            **kwargs
+    ):
+        await edit_inventory(
+                inter, self, 'build', 
+                CountryParameters(self, **kwargs), item_name,
+                kwargs['count']
+        )
+
+    @MyCog.autocomplete(units_autocomplete.items, 'item_name')
+    @MyCog.curators_perm()
+    @MyCog.add_parent_arguments()
+    @edit_inventory.subcommand(name='unit', description='Изменить инвентарь зданий')
+    async def edit_inventory_unit(
+            self, inter: Interaction,
+            item_name: str = ITEM_NAME,
+            **kwargs
+    ):
+        await edit_inventory(
+                inter, self, 'unit', 
+                CountryParameters(self, **kwargs), item_name,
+                kwargs['count']     
+        )
+
+
+    @manage_inventory.subcommand(name='delete')
+    async def delete_inventory(
+            self, inter: Interaction,
+            player: Member = SlashOption(
+                name='игрок',
+                description='Игрок, чей инвентарь будет удален',
+                required=False,
+                default=None
+            ),
+            for_all_countries: bool = SlashOption(
+                name='для-всех-стран',
+                description='Удалить инвентари всем игрокам',
+                required=False,
+                default=False
+            )
+    ):
+        pass
+
+    ITEM_NAME = SlashOption(
+            name='имя',
+            description='Имя удаляемого предмета'
+    )
+    @MyCog.autocomplete(builds_autocomplete.items, 'item_name')
+    @MyCog.curators_perm()
+    @MyCog.add_parent_arguments()
+    @delete_inventory.subcommand(name='build', description='Удалить здание из инвентаря')
     async def delete_inventory_build(
-        self, inter: Interaction,
-        name: str = _DELETE_INVENTORY_ITEM_PARAMETERS['name'],
-        player: Member = _INVENTORY_PARAMETERS['player'],
-        for_all_countries: bool = _INVENTORY_PARAMETERS['for_all_countries']
+            self, inter: Interaction,
+            item_name: str = ITEM_NAME,
+            **kwargs
     ):
         await delete_item_inventory(
-                inter, self, 'build', player, 
-                for_all_countries, list_items().deletable_items['builds'][name]
+                inter, self, 'build',                
+                CountryParameters(self, **kwargs), item_name,
         )
 
-    @application_checks.check(MyCog.curators_perf)
-    @slash_command(name='del-inv-unit', description='Удалить юнита из инвентаря')
+    @MyCog.autocomplete(units_autocomplete.items, 'item_name')
+    @MyCog.curators_perm()
+    @MyCog.add_parent_arguments()
+    @delete_inventory.subcommand(name='unit', description='Удалить здание из инвентаря')
     async def delete_inventory_unit(
-        self, inter: Interaction,
-        name: str = _DELETE_INVENTORY_ITEM_PARAMETERS['name'],
-        player: Member = _INVENTORY_PARAMETERS['player'],
-        for_all_countries: bool = _INVENTORY_PARAMETERS['for_all_countries']
+            self, inter: Interaction,
+            item_name: str = ITEM_NAME,
+            **kwargs
     ):
         await delete_item_inventory(
-                inter, self, 'build', player, 
-                for_all_countries, list_items().deletable_items['units'][name]
+                inter, self, 'unit',                
+                CountryParameters(self, **kwargs), item_name,
         )
 
-    @delete_inventory_build.on_autocomplete('name')
-    async def del_inv_build_autocomplete(self, inter: Interaction, name: str):
-        await inter.response.send_autocomplete(
-                list_items().get_same_items(list_items().deletable_items['builds'], name)
-        )
-
-    @delete_inventory_unit.on_autocomplete('name')
-    async def inv_unit_autocomplete(self, inter: Interaction, name: str):
-        await inter.response.send_autocomplete(
-                list_items().get_same_items(list_items().deletable_items['units'], name)
-        )
 
 def setup(bot: Bot):
     bot.add_cog(Lists(bot))

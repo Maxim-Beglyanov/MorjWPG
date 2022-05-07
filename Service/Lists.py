@@ -3,13 +3,11 @@ if __name__ == '__main__':
 from typing import Any
 
 from Database.Database import database
-from Service.default import _ALL
-from Service.Country import AllCountries, Country, OneCountry
+from Service.default import ALL
+from Service.Country import Country
 from Service.Items import ItemFabric, Item
-from Service.exceptions import OperationOnlyForOneCountry
 
-_ALL_ITEMS = _ALL
-_ALL_COUNTRIES = _ALL
+
 class List:
     """Класс списков, которые использует предметы"""
     item: Item
@@ -22,15 +20,18 @@ class Shop(List):
 
     def get_shop(self) -> dict[str, dict[str, Any]]:
         shop = {}
-        item_name = f'{self.item.arguments_name}_name'
 
-        for i in database().select(
+        for item in database().select(
                 'SELECT * '
                f'FROM get_{self.item.table_name}_shop()'
         ):
-            shop[i.pop(item_name)] = i
+            shop[item.pop('name')] = item
             
         return shop
+
+
+ALL_ITEMS = ALL
+ALL_COUNTRIES = ALL
 
 class Inventory(List):
     item: Item
@@ -41,62 +42,58 @@ class Inventory(List):
         self.country = country
 
     def get_inventory(self) -> dict[str, dict[str, Any]]:
-        assert self.country.len_ == 1
+        assert self.country.count == 1
 
         inventory = {}
-
         for i in database().select(
                 'SELECT * '
                f'FROM get_{self.item.table_name}_inventory(%s)',
-                self.country.id_[0]
-               ):
+                self.country.ids[0]
+        ):
             inventory[i.pop('name')] = i
 
         return inventory
 
     def edit_inventory(self, item_id: int, count: int):
-        if self.country.len_ == _ALL_COUNTRIES:
-            countries = database().select('SELECT country_id '
-                                          'FROM countries')
-            values = []
-            for i in countries:
-                values.append(f"({i['country_id']}, {item_id}, {count})")
-        
+        if self.country.count != ALL_COUNTRIES:
+            countries = self.country.ids
         else:
-            values = []
-            for i in self.country.id_:
-                values.append(f"({i}, {item_id}, {count})")
+            all_countries = database().select(
+                    'SELECT country_id '
+                    'FROM countries'
+            )
+            countries = [country['country_id'] for country in all_countries]
 
+        values = [f'({country}, {item_id}, {count})' for country in countries]
         values = ',\n'.join(values)
-        
-        item_inventory = f'{self.item.table_name}_inventory'
-        id_ = f'{self.item.arguments_name}_id'
 
-        database().insert(f'INSERT INTO {item_inventory}'
-                          f'(country_id, {id_}, count) '
-                          f'VALUES{values} '
-                          f'ON CONFLICT(country_id, {id_}) DO UPDATE '
-                          f'SET count = {item_inventory}.count+%s', count)
+        database().insert(
+                f'INSERT INTO {self.item.table_name}_inventory'
+                f'(country_id, {self.item.arguments_name}_id, count) '
+                f'VALUES{values} '
+                f'ON CONFLICT(country_id, {self.item.arguments_name}_id) DO UPDATE '
+                f'SET count = {self.item.table_name}_inventory.count+%s', 
+                count
+        )
     
     def delete_inventory_item(self, item_id: int):
-        if self.country.len_ == _ALL_COUNTRIES:
-            country_where = True
-        else:
-            country_where = []
-            for id_ in self.country.id_:
-                country_where.append(str(id_))
-
+        if self.country.count != ALL_COUNTRIES:
+            country_where = [str(country_id) for country_id in self.country.ids]
             country_where = ', '.join(country_where)
             country_where = f'country_id IN ({country_where})'
 
-        if item_id == _ALL_ITEMS:
-            item_where = True
         else:
+            country_where = True
+            
+        if item_id != ALL_ITEMS:
             item_where = f'{self.item.arguments_name}_id = {item_id}'
-
+        else:
+            item_where = True
+            
         where = f'WHERE {country_where} AND {item_where}'
-
-        database().insert(f'DELETE FROM {self.item.table_name}_inventory '+ where)
+        database().insert(
+                f'DELETE FROM {self.item.table_name}_inventory '+where
+        )
 
 
 class ListFabric:
@@ -111,10 +108,3 @@ class ShopFabric(ListFabric):
 class InventoryFabric(ListFabric):
     def get_inventory(self, country: Country, item: str) -> Inventory:
         return Inventory(self.item_fabric.get_item(item), country)
-
-
-if __name__ == '__main__':
-    country = AllCountries()
-    inventory = InventoryFabric().get_inventory(country, 'build')
-
-    inventory.delete_inventory_item(-1)
