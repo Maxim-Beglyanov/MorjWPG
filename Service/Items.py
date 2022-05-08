@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 from psycopg2._psycopg import cursor
 
-from Service.default import ALL
+from default import ALL, MISSING
 from Database.Database import database
 from Service.Transaction import Transaction
 from Service.Country import Country
@@ -21,7 +21,7 @@ class Form:
         output_parameters = {}
 
         for parameter in parameters:
-            if parameters[parameter] != None: 
+            if parameters[parameter] != MISSING: 
                 output_parameters[parameter] = parameters[parameter]
 
         return output_parameters
@@ -33,16 +33,16 @@ class Form:
 
 @dataclass
 class NeededForPurchaseGroupParameters(Form):
-    should_not_be: bool = None
-    type: str = None
+    should_not_be: bool = MISSING
+    type: str = MISSING
 
 @dataclass
 class NeededForPurchaseForm(Form):
     needed_build_id: int
     count: float|int
 
-    should_not_be: bool = None
-    proportionally_items: bool = None
+    should_not_be: bool = MISSING
+    proportionally_items: bool = MISSING
 
 @dataclass
 class NeededForPurchaseGroupForm(Form):
@@ -53,18 +53,18 @@ class NeededForPurchaseGroupForm(Form):
 @dataclass
 class ItemParameters(Form):
     name: str
-    price: float = None
-    description: str = None
-    group_name: str = None
-    buyability: bool = None
-    saleability: bool = None
-    needed_for_purchase: NeededForPurchaseGroupForm = None
+    price: float = MISSING
+    description: str = MISSING
+    group_name: str = MISSING
+    buyability: bool = MISSING
+    saleability: bool = MISSING
+    needed_for_purchase: NeededForPurchaseGroupForm = MISSING
 
     def __init__(
-            self, name: str, price: float = None,
-            description: str = None, group_name: str = None, 
-            buyability: bool = None, saleability: bool = None, 
-            needed_for_purchase: NeededForPurchaseGroupForm = None,
+            self, name: str, price: float = MISSING,
+            description: str = MISSING, group_name: str = MISSING, 
+            buyability: bool = MISSING, saleability: bool = MISSING, 
+            needed_for_purchase: NeededForPurchaseGroupForm = MISSING,
             *args, **kwargs
     ):
         self.name = name
@@ -85,8 +85,8 @@ class ItemParameters(Form):
 @dataclass
 class ItemForm(Form):
     """Класс предмета или группы предметов для их изменения"""
-    item_id: int = None
-    group: str = None
+    item_id: int = MISSING
+    group: str = MISSING
 
     def __post_init__(self):
         if not any((self.item_id, self.group)):
@@ -149,7 +149,7 @@ class Item(ABC):
     def update(self, item: ItemForm, parameters: ItemParameters):
         """Обновление одного предмета"""
 
-        if parameters.needed_for_purchase != None:
+        if parameters.needed_for_purchase != MISSING:
             database().insert(
                     f'DELETE FROM {self.table_name}_needed_for_purchase '
                     f'WHERE {self.arguments_name}_id = %s; '
@@ -182,7 +182,7 @@ class Item(ABC):
             needed_for_purchase_groups = needed_for_purchase.needed_for_purchase_groups
 
             self._add_needed_for_purchase_group(
-                    None, item_id, 
+                    MISSING, item_id, 
                     needed_for_purchase_parameters,
                     group_needed_for_purchases, 
                     needed_for_purchase_groups
@@ -473,10 +473,11 @@ class NeededForPurchase(Component):
             return needed_build_count*-1
 
     def _check_buy_ability(self, needed_build_count: int) -> bool:
+        print(needed_build_count)
         if not self.should_not_be:
-            return needed_build_count>0
-        else:
             return needed_build_count>=0
+        else:
+            return needed_build_count>0
 
     def _get_cant_buy_reason(self, needed_build_count: int) -> str:
         """Возвращает информацию о проверки, 
@@ -492,7 +493,7 @@ class NeededForPurchase(Component):
         )['name']
 
         if not self.should_not_be:
-            return f'{build_name}: {abs(needed_build_count)}'
+            return f'{build_name}: {abs(needed_build_count)}, '
         else:
             return f'{build_name}: {needed_build_count}'
 
@@ -874,13 +875,13 @@ class SellItem(Transaction):
 
 @dataclass
 class BuildParameters(ItemParameters):
-    income: float|int = None
+    income: float|int = MISSING
 
     def __init__(
-            self, name: str, price: float = None, income: float|int = None,
-            description: str = None, group_name: str = None, 
-            buyability: bool = None, saleability: bool = None, 
-            needed_for_purchase: NeededForPurchaseGroupForm = None, 
+            self, name: str, price: float = MISSING, income: float|int = MISSING,
+            description: str = MISSING, group_name: str = MISSING, 
+            buyability: bool = MISSING, saleability: bool = MISSING, 
+            needed_for_purchase: NeededForPurchaseGroupForm = MISSING, 
             *args, **kwargs
     ):
         super().__init__(
@@ -909,13 +910,13 @@ class Build(Item):
 
 @dataclass
 class UnitParameters(ItemParameters):
-    features: str = None
+    features: str = MISSING
 
     def __init__(
-            self, name: str, price: float = None, features: str = None,
-            description: str = None, group_name: str = None, 
-            buyability: bool = None, saleability: bool = None, 
-            needed_for_purchase: NeededForPurchaseGroupForm = None, 
+            self, name: str, price: float = MISSING, features: str = MISSING,
+            description: str = MISSING, group_name: str = MISSING, 
+            buyability: bool = MISSING, saleability: bool = MISSING, 
+            needed_for_purchase: NeededForPurchaseGroupForm = MISSING, 
             *args, **kwargs
     ):
         super().__init__(

@@ -7,6 +7,8 @@ from psycopg2._psycopg import connection, cursor
 from psycopg2.pool import AbstractConnectionPool, SimpleConnectionPool
 import psycopg2.extras
 
+from default import MISSING
+
 
 _CURENT_DATABASE_VERSION = 1.2
 class Database(ABC):
@@ -28,7 +30,7 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def insert(self, sql: str, *values) -> None|Any:
+    def insert(self, sql: str, *values) -> MISSING | Any:
         pass
     
     @abstractmethod
@@ -124,7 +126,7 @@ class SimpleDatabase(Database):
         self.pool.putconn(conn)
     
 
-    def insert(self, sql: str, *values) -> None | Any:
+    def insert(self, sql: str, *values) -> MISSING | Any:
         conn = self.get_conn()
         try:
             cur = conn.cursor()

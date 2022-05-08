@@ -1,6 +1,7 @@
 from nextcord import Member, Interaction, slash_command, SlashOption
 from nextcord.ext.commands import Bot
 
+from default import MISSING
 from Discord.Controller.defaults import CountryParameters
 from Discord.Controller.Economy import get_balance, pay, edit_money, delete_money
 from Discord.Cogs.Cog import MyCog
@@ -15,7 +16,7 @@ class Economy(MyCog):
                 name='игрок',
                 description='Игрок, баланс которого вы хотите посмотреть',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         await get_balance(inter, self, player)
@@ -55,13 +56,13 @@ class Economy(MyCog):
                 name='игрок',
                 description='Игрок, чей баланс вы хотите изменить',
                 required=False,
-                default=None
+                default=MISSING
             ),
             for_all_countries: bool = SlashOption(
                 name='для-всех-стран',
                 description='Если верно, то изменит деньги всем странам',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         await edit_money(
@@ -81,13 +82,13 @@ class Economy(MyCog):
                 name='игрок',
                 description='Игрок, чей баланс будет удален',
                 required=False,
-                default=None
+                default=MISSING
             ),
             for_all_countries: bool = SlashOption(
                 name='для-всех-стран',
                 description='Если верно, то удалятся все деньги стран',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         await delete_money(

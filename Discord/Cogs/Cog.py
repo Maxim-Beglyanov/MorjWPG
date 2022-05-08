@@ -1,11 +1,11 @@
 from typing import Any
 
-from nextcord import Interaction, Embed, Member
+from nextcord import Interaction, Embed, Member, utils
 from nextcord.application_command import ApplicationCommand, ApplicationSubcommand, SlashOption
-from nextcord.utils import MISSING
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Bot, Cog
 
+from default import MISSING
 from Discord.Cogs.View import Question, Pages, Confirm
 from Discord.Cogs.exceptions import IsntAdministrator, IsntCurator, IsntRuler, NoAnswer
 from Discord.Controller.Config import Config
@@ -53,7 +53,7 @@ class MyCog(Cog):
         req_options = {}
         nonreq_options = {}
         for option in command.options:
-            if command.options[option].required in (MISSING, True):
+            if command.options[option].required in (utils.MISSING, True):
                 req_options[option] = command.options[option]
             else:
                 nonreq_options[option] = command.options[option]
@@ -64,7 +64,7 @@ class MyCog(Cog):
     async def send(
             self, inter: Interaction,
             title: str, message: str, 
-            user: Member=None
+            user: Member=MISSING
     ):
         if not user:
             user = self.bot.user
@@ -92,13 +92,13 @@ class MyCog(Cog):
         await inter.send(embed=embed, view=view)
 
         await view.wait()
-        if view.answer_ == None: raise NoAnswer
+        if view.answer_ == MISSING: raise NoAnswer
         else: return view.answer_
 
     async def page(
             self, inter: Interaction, 
             title: str, pages: list[str], 
-            user: Member=None, page_number: int=1
+            user: Member=MISSING, page_number: int=1
     ):
         if not user:
             user = self.bot.user
@@ -130,7 +130,7 @@ class MyCog(Cog):
         await inter.send(message, view=view)
         
         await view.wait()
-        if view.switch_ == None: raise NoAnswer
+        if view.switch_ == MISSING: raise NoAnswer
         else: return view.switch_
 
 
@@ -153,9 +153,9 @@ class MyCog(Cog):
         except IsntRuler:
             pass
 
-        if player == None and check_player:
+        if player == MISSING and check_player:
             return inter.user
-        elif player == None and not check_player:
+        elif player == MISSING and not check_player:
             raise IsntRuler(inter.user)
 
         if MyCog.check_curator(inter.user) and MyCog.check_player(player):

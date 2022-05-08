@@ -3,6 +3,8 @@ from nextcord import Embed, Member, Interaction
 from nextcord.ui import View, Button, button, Select, select
 from nextcord import ButtonStyle
 
+from default import MISSING
+
 
 class Pages(View):
     def __init__(self, user: Member, list: list[Embed], 
@@ -40,7 +42,7 @@ class Pages(View):
                        '(взаимодействие заморожено)')
         )
 
-        await self.msg.edit(embed=embed, view=None)
+        await self.msg.edit(embed=embed, view=MISSING)
 
 
     @button(label='Прошлая страница', style=ButtonStyle.primary)
@@ -108,7 +110,7 @@ class Question(View):
         for i in values:
             self.children[0].add_option(label=i, value=values[i])
         
-        self.answer_ = None
+        self.answer_ = MISSING
     
     async def interaction_check(self, interaction: Interaction):
         if self.user != interaction.user:

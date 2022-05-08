@@ -22,22 +22,12 @@ class Events(Cog):
 
         if isinstance(error, application_checks.errors.ApplicationMissingRole):
             message = ':x: У вас не достаточно прав для этого'
-        
         elif isinstance(error, IsntCurator):
-            message = ':x: Вы не куратор'
-        elif isinstance(error, IsntRuler):
-            message = ':x:'+str(error)
-        
+            message = ':x: Вы не куратор'        
         elif isinstance(error, NoAnswer):
             message = ':x: Я не дождался ответа'
-
-        elif isinstance(error, NoItemsThatName):
-            message = ':x:'+str(error)
-        elif isinstance(error, WrongFormParameter):
-            message = ':x:'+str(error)
-
-        elif isinstance(error, CantTransact):
-            message = ':x:'+str(error)
+        elif error in (IsntRuler, NoItemsThatName, WrongFormParameter, CantTransact):
+            message = ':x: '+str(error)
             
         else:
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)

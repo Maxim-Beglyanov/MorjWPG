@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import time, timezone, timedelta, datetime
 import threading
 
+from default import MISSING
 from Database.Database import database
 
 
@@ -43,7 +44,7 @@ class Income(Publisher):
     def __init__(self):
         self._observers = []
 
-        self.__timer = None
+        self.__timer = MISSING
         self.__start_timer()
     
     def income(self):

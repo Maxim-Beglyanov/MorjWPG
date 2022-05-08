@@ -1,7 +1,7 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
 
-from Service.default import ALL
+from default import ALL, MISSING
 from Database.Database import database
 
 
@@ -60,5 +60,5 @@ class OneCountry(Country):
 
 class AllCountries(Country):
     _count: int = ALL_COUNTRIES
-    _ids: tuple[int] = None
+    _ids: tuple[int] = MISSING
     _where: str = ''

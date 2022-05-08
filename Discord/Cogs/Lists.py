@@ -1,6 +1,7 @@
 from nextcord import Member, Interaction, slash_command, SlashOption
 from nextcord.ext.commands import Bot
 
+from default import MISSING
 from Discord.Controller.Lists import get_shop, get_inventory, \
                                      edit_inventory, \
                                      delete_item_inventory
@@ -48,7 +49,7 @@ class Lists(MyCog):
                 name='игрок',
                 description='Игрок, чей инвентарь вы хотите увидеть',
                 required=False,
-                default=None
+                default=MISSING
             ),
             page_number: int = SlashOption(
                 name='страница',
@@ -101,7 +102,7 @@ class Lists(MyCog):
                 name='игрок',
                 description='Игрок, у которого будет изменен инвентарь',
                 required=False,
-                default=None
+                default=MISSING
             ),
             for_all_countries: bool = SlashOption(
                 name='для-всех-стран',
@@ -116,7 +117,7 @@ class Lists(MyCog):
             name='имя',
             description='Имя добавляемого предмета'
     )
-    @MyCog.autocomplete(builds_autocomplete.items, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().items, 'item_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @edit_inventory.subcommand(name='build', description='Изменить инвентарь зданий')
@@ -131,7 +132,7 @@ class Lists(MyCog):
                 kwargs['count']
         )
 
-    @MyCog.autocomplete(units_autocomplete.items, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().items, 'item_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @edit_inventory.subcommand(name='unit', description='Изменить инвентарь зданий')
@@ -154,7 +155,7 @@ class Lists(MyCog):
                 name='игрок',
                 description='Игрок, чей инвентарь будет удален',
                 required=False,
-                default=None
+                default=MISSING
             ),
             for_all_countries: bool = SlashOption(
                 name='для-всех-стран',
@@ -169,7 +170,7 @@ class Lists(MyCog):
             name='имя',
             description='Имя удаляемого предмета'
     )
-    @MyCog.autocomplete(builds_autocomplete.items, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().items, 'item_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @delete_inventory.subcommand(name='build', description='Удалить здание из инвентаря')
@@ -183,7 +184,7 @@ class Lists(MyCog):
                 CountryParameters(self, **kwargs), item_name,
         )
 
-    @MyCog.autocomplete(units_autocomplete.items, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().items, 'item_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @delete_inventory.subcommand(name='unit', description='Удалить здание из инвентаря')

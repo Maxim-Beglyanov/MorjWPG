@@ -3,7 +3,7 @@ if __name__ == '__main__':
 from typing import Any
 
 from Database.Database import database
-from Service.default import ALL
+from default import ALL
 from Service.Country import Country
 from Service.Items import ItemFabric, Item
 

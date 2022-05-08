@@ -1,6 +1,7 @@
 from nextcord import Interaction, Member, slash_command, SlashOption
 from nextcord.ext.commands import Bot
 
+from default import MISSING
 from Discord.Controller.defaults import CountryParameters
 from Discord.Controller.Country import delete_country
 from Discord.Cogs.Cog import MyCog
@@ -19,13 +20,13 @@ class Country(MyCog):
                 name='игрок',
                 description='Игрок, которого вы хотите удалить',
                 required=False,
-                default=None
+                default=MISSING
             ),
             for_all_countries: bool = SlashOption(
                 name='для-всех-стран',
                 description='Удалить все страны',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         await delete_country(

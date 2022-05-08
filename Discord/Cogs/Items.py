@@ -5,6 +5,7 @@ from nextcord.embeds import Embed
 from nextcord.ext.commands import Bot
 from nextcord.member import Member
 
+from default import MISSING
 from Service.Items import ItemFabric, BuildParameters, UnitParameters
 from Discord.Cogs.View import Pages
 from Discord.Controller.Items import CommandItemForm, \
@@ -144,8 +145,12 @@ class ItemAutocomplete:
             
         return words_output
 
-builds_autocomplete = ItemAutocomplete('builds')
-units_autocomplete = ItemAutocomplete('units')
+g_builds_autocomplete = ItemAutocomplete('builds')
+def builds_autocomplete() -> ItemAutocomplete:
+    return g_builds_autocomplete
+g_units_autocomplete = ItemAutocomplete('units')
+def units_autocomplete() -> ItemAutocomplete:
+    return g_units_autocomplete
 
 
 class CogItems(MyCog):
@@ -216,7 +221,7 @@ class CogItems(MyCog):
             name='имя',
             description='Имя покупаемого предмета'
     )
-    @MyCog.autocomplete(builds_autocomplete.buyable_items, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().buyable_items, 'item_name')
     @MyCog.players_perm()
     @MyCog.add_parent_arguments()
     @buy.subcommand(name='build', description='Купить здание')
@@ -230,7 +235,7 @@ class CogItems(MyCog):
                 item_name, kwargs['count']
         )
 
-    @MyCog.autocomplete(units_autocomplete.buyable_items, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().buyable_items, 'item_name')
     @MyCog.players_perm()
     @MyCog.add_parent_arguments()
     @buy.subcommand(name='unit', description='Купить юнита')
@@ -269,7 +274,7 @@ class CogItems(MyCog):
             name='имя',
             description='Имя продаваемого предмета'
     )
-    @MyCog.autocomplete(builds_autocomplete.saleable_items, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().saleable_items, 'item_name')
     @MyCog.players_perm()
     @MyCog.add_parent_arguments()
     @sell.subcommand(name='build', description='Продать здание')
@@ -283,7 +288,7 @@ class CogItems(MyCog):
                 item_name=item_name, **kwargs
         )
 
-    @MyCog.autocomplete(units_autocomplete.saleable_items, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().saleable_items, 'item_name')
     @MyCog.players_perm()
     @MyCog.add_parent_arguments()
     @sell.subcommand(name='unit', description='Продать юнита')
@@ -317,26 +322,26 @@ class CogItems(MyCog):
                 name='описание',
                 description='Описание, которое должно пояснять игроку о предмете',
                 required=False,
-                default=None
+                default=MISSING
             ),
             buyability: bool = SlashOption(
                 name='возможность-покупки',
                 description='Определяет, смогут ли игроки покупать предмет',
                 required=False,
-                default=None
+                default=MISSING
             ),
             saleability: bool = SlashOption(
                 name='возможность-продажи',
                 description=('Определяет, смогут ли игроки продавать '
                              'предмет между собой'),
                 required=False,
-                default=None
+                default=MISSING
             ),
             needed_for_purchase: str = SlashOption(
                 name='необходимо-для-покупки',
                 description='Смотри в /help',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         pass
@@ -345,9 +350,9 @@ class CogItems(MyCog):
             name='группа',
             description='Группа предмета',
             required=False,
-            default=None
+            default=MISSING
     )
-    @MyCog.autocomplete(builds_autocomplete.item_groups, 'group_name')
+    @MyCog.autocomplete(builds_autocomplete().item_groups, 'group_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @add.subcommand(name='build', description='Добавить новое здание') 
@@ -358,7 +363,7 @@ class CogItems(MyCog):
                 description=('Доход, который будет выдаваться ' 
                              'за каждое здание в ход'),
                 required=False,
-                default=None
+                default=MISSING
             ),
             group_name: str = GROUP_NAME,
             **kwargs
@@ -373,7 +378,7 @@ class CogItems(MyCog):
         )
         item_lists().update_items('builds')
 
-    @MyCog.autocomplete(units_autocomplete.item_groups, 'group_name')
+    @MyCog.autocomplete(units_autocomplete().item_groups, 'group_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @add.subcommand(name='unit', description='Добавить нового юнита')
@@ -384,7 +389,7 @@ class CogItems(MyCog):
                 description=('Характеристики юнита, отделенные от описания. '
                              'определенной формы нет'),
                 required=False,
-                default=None
+                default=MISSING
             ),
             group_name: str = GROUP_NAME,
             **kwargs
@@ -408,37 +413,37 @@ class CogItems(MyCog):
                 name='имя',
                 description='Новое имя',
                 required=False,
-                default=None
+                default=MISSING
             ),
             price: float = SlashOption(
                 name='цена',
                 description='Новая цена',
                 required=False,
-                default=None
+                default=MISSING
             ),
             description: str = SlashOption(
                 name='описание',
                 description='Новое описание',
                 required=False,
-                default=None
+                default=MISSING
             ),
             buyability: bool = SlashOption(
                 name='возможность-покупки',
                 description='Новая возможность покупки',
                 required=False,
-                default=None
+                default=MISSING
             ),
             saleability: bool = SlashOption(
                 name='возможность-продажи',
                 description='Новая возможность продажи',
                 required=False,
-                default=None
+                default=MISSING
             ),
             needed_for_purchase: str = SlashOption(
                 name='необходимо-для-покупки',
                 description='Новое необходимое для покупки',
                 required=False,
-                default=None
+                default=MISSING
             )
     ):
         pass
@@ -448,23 +453,23 @@ class CogItems(MyCog):
             name='имя-предмета',
             description='Имя изменяемого предмета',
             required=False,
-            default=None
+            default=MISSING
     )
     ITEMS_GROUP = SlashOption(
             name='группа-предметов',
             description='Группа изменяемых предметов',
             required=False,
-            default=None
+            default=MISSING
     )
     GROUP_NAME = SlashOption(
             name='группа',
             description='Новая группа предмета',
             required=False,
-            default=None
+            default=MISSING
     )
-    @MyCog.autocomplete(builds_autocomplete.items, 'item_name')
-    @MyCog.autocomplete(builds_autocomplete.item_groups, 'items_group')
-    @MyCog.autocomplete(builds_autocomplete.item_groups, 'group_name')
+    @MyCog.autocomplete(builds_autocomplete().items, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().item_groups, 'items_group')
+    @MyCog.autocomplete(builds_autocomplete().item_groups, 'group_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @update.subcommand(name='build', description='Обновить здания')
@@ -476,7 +481,7 @@ class CogItems(MyCog):
                 name='доход',
                 description='Новый доход',
                 required=False,
-                default=None
+                default=MISSING
             ),
             group_name: str = GROUP_NAME,
             **kwargs
@@ -495,9 +500,9 @@ class CogItems(MyCog):
         )
         item_lists().update_items('builds')
 
-    @MyCog.autocomplete(units_autocomplete.items, 'item_name')
-    @MyCog.autocomplete(units_autocomplete.item_groups, 'items_group')
-    @MyCog.autocomplete(units_autocomplete.item_groups, 'group_name')
+    @MyCog.autocomplete(units_autocomplete().items, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().item_groups, 'items_group')
+    @MyCog.autocomplete(units_autocomplete().item_groups, 'group_name')
     @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @update.subcommand(name='unit', description='Обновить юнитов')
@@ -509,7 +514,7 @@ class CogItems(MyCog):
                 name='характеристики',
                 description='Новые характеристики',
                 required=False,
-                default=None
+                default=MISSING
             ),
             group_name: str = GROUP_NAME,
             **kwargs
@@ -538,16 +543,16 @@ class CogItems(MyCog):
             description=('Имя предмета, который будет удален, '
                          'ты можешь ввести all, чтобы удалить все'),
             required=False,
-            default=None
+            default=MISSING
     )
     ITEMS_GROUP = SlashOption(
             name='группа-предметов',
             description='Группа предметов, которые будут удалены',
             required=False,
-            default=None
+            default=MISSING
     )
-    @MyCog.autocomplete(builds_autocomplete.items_with_all, 'item_name')
-    @MyCog.autocomplete(builds_autocomplete.item_groups, 'items_group')
+    @MyCog.autocomplete(builds_autocomplete().items_with_all, 'item_name')
+    @MyCog.autocomplete(builds_autocomplete().item_groups, 'items_group')
     @delete.subcommand(name='build', description='Удалить здание')
     async def delete_build(
             self, inter: Interaction,
@@ -564,8 +569,8 @@ class CogItems(MyCog):
         )
         item_lists().update_items('builds')
 
-    @MyCog.autocomplete(units_autocomplete.items_with_all, 'item_name')
-    @MyCog.autocomplete(units_autocomplete.item_groups, 'items_group')
+    @MyCog.autocomplete(units_autocomplete().items_with_all, 'item_name')
+    @MyCog.autocomplete(units_autocomplete().item_groups, 'items_group')
     @MyCog.add_parent_arguments()
     @delete.subcommand(name='unit', description='Удалить юнита')
     async def delete_unit(
