@@ -7,8 +7,10 @@ from default import MISSING
 
 
 class Pages(View):
-    def __init__(self, user: Member, list: list[Embed], 
-                 page_number: int=1, timeout: float=120):
+    def __init__(
+            self, user: Member, list: list[Embed], 
+            page_number: int=1, timeout: float=120
+    ):
         super().__init__(timeout=timeout)
 
         self.user = user

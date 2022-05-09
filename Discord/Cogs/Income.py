@@ -61,6 +61,7 @@ class CogIncome(MyCog):
     ):
         pass
 
+    @MyCog.curators_perm()
     @MyCog.add_parent_arguments()
     @edit_income_times.subcommand(name='add', description='Добавить время дохода')
     async def add_income_time(
@@ -73,6 +74,7 @@ class CogIncome(MyCog):
         )
     
     @MyCog.curators_perm()
+    @MyCog.add_parent_arguments()
     @edit_income_times.subcommand(name='delete', description='Удалить время дохода')
     async def delete_income_time(
             self, inter: Interaction,
