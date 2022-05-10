@@ -172,18 +172,10 @@ class MyCog(Cog):
     @staticmethod
     def curators_and_players_perm():
         def check(inter: Interaction):
-            check_curator = False
-            check_player = False
             try:
-                check_curator = MyCog.check_curator(inter.user)
-                check_player = MyCog.check_player(inter.user)
-
-                return True
-            except Exception as e:
-                if not any((check_curator, check_player)):
-                    raise e
-                else:
-                    return True
+                return MyCog.check_curator(inter.user)
+            except IsntCurator:
+                return MyCog.check_player(inter.user)
 
         return application_checks.check(check)
 
