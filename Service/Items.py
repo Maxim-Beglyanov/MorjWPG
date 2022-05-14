@@ -473,7 +473,6 @@ class NeededForPurchase(Component):
             return needed_build_count*-1
 
     def _check_buy_ability(self, needed_build_count: int) -> bool:
-        print(needed_build_count)
         if not self.should_not_be:
             return needed_build_count>=0
         else:
@@ -911,10 +910,12 @@ class Build(Item):
 @dataclass
 class UnitParameters(ItemParameters):
     features: str = MISSING
+    expenses: float = MISSING
 
     def __init__(
             self, name: str, price: float = MISSING, features: str = MISSING,
-            description: str = MISSING, group_name: str = MISSING, 
+            expenses: float = MISSING, description: str = MISSING, 
+            group_name: str = MISSING, 
             buyability: bool = MISSING, saleability: bool = MISSING, 
             needed_for_purchase: NeededForPurchaseGroupForm = MISSING, 
             *args, **kwargs
@@ -927,6 +928,7 @@ class UnitParameters(ItemParameters):
                 *args, **kwargs
         )
         self.features = features
+        self.expenses = expenses
 
 class Unit(Item):
     table_name: str = 'units'

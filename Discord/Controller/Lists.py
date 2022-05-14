@@ -103,6 +103,7 @@ ITEMS_PARAMTERS = {
     'description': 'Описание',
     'income': 'Доход',
     'features': 'Характеристики',
+    'expenses': 'Трата',
     'buyability': 'Способность покупать',
     'saleability': 'Способность продавать',
     'needed_for_purchase': 'Необходимо для покупки'

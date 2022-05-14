@@ -8,7 +8,7 @@ from nextcord.ext import application_checks
 
 from Discord.Cogs.exceptions import IsntCurator, IsntRuler, NoAnswer
 from Discord.Controller.exceptions import NoItemsThatName, WrongFormParameter
-from Service.exceptions import CantTransact
+from Service.exceptions import CantTransact, ThisCountryNotInAlliance
 
 
 class Events(Cog):
@@ -26,7 +26,7 @@ class Events(Cog):
             message = ':x: Вы не куратор'        
         elif isinstance(error, NoAnswer):
             message = ':x: Я не дождался ответа'
-        elif error in (IsntRuler, NoItemsThatName, WrongFormParameter, CantTransact):
+        elif error in (IsntRuler, NoItemsThatName, WrongFormParameter, CantTransact, ThisCountryNotInAlliance):
             message = ':x: '+str(error)
             
         else:

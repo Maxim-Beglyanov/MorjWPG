@@ -10,23 +10,30 @@ CREATE EXTENSION pg_trgm;
 --
 
 CREATE DOMAIN item_price AS real DEFAULT 0.1 NOT NULL CHECK(VALUE>0);
+CREATE TYPE group_type AS ENUM ('All', 'Any');
 
 --
 -- Создаем таблицы
 --
 
-CREATE TABLE builds(
-    build_id int GENERATED ALWAYS AS IDENTITY,
-    name varchar(128) UNIQUE NOT NULL,
+CREATE TABLE items(
+    name varchar(128) NOT NULL,
     group_name varchar(128),
     price item_price,
     description text DEFAULT '',
-    income real DEFAULT 0.0,
     buyability boolean DEFAULT True,
-    saleability boolean DEFAULT False,
+    saleability boolean
+);
+
+CREATE TABLE builds(
+    build_id int GENERATED ALWAYS AS IDENTITY,
+    income real DEFAULT 0.0,
 
     CONSTRAINT PK_builds_build_id PRIMARY KEY(build_id)
-);
+) INHERITS(items);
+
+ALTER TABLE builds
+ALTER COLUMN saleability SET DEFAULT False;
 
 CREATE TABLE builds_needed_for_purchase(
     build_needed_for_purchase_id int GENERATED ALWAYS AS IDENTITY,
@@ -41,8 +48,6 @@ CREATE TABLE builds_needed_for_purchase(
     CONSTRAINT FK_build_needed_build_id FOREIGN KEY(needed_build_id) REFERENCES builds(build_id) ON DELETE CASCADE,
     CONSTRAINT needed_build_count_CHK CHECK(count > 0)
 );
-
-CREATE TYPE group_type AS ENUM ('All', 'Any');
 
 CREATE TABLE builds_groups_needed_for_purchase(
     build_group_id int GENERATED ALWAYS AS IDENTITY,
@@ -88,16 +93,14 @@ CREATE TABLE builds_needed_for_purchase_groups(
 
 CREATE TABLE units(
     unit_id int GENERATED ALWAYS AS IDENTITY,
-    name varchar(128) UNIQUE NOT NULL,
-    group_name varchar(128),
-    price item_price,
-    description text DEFAULT '',
     features text DEFAULT '',
-    buyability boolean DEFAULT True,
-    saleability boolean DEFAULT True,
+    expenses real DEFAULT 0.0,
 
     CONSTRAINT PK_units_unit_id PRIMARY KEY(unit_id)
-);
+) INHERITS(items);
+
+ALTER TABLE units
+ALTER COLUMN saleability SET DEFAULT True;
 
 CREATE TABLE units_needed_for_purchase(
     unit_needed_for_purchase_id int GENERATED ALWAYS AS IDENTITY,
@@ -160,6 +163,7 @@ CREATE TABLE countries(
     country_id int GENERATED ALWAYS AS IDENTITY,
     name varchar(128) UNIQUE NOT NULL,
     money real DEFAULT 0,
+    alliance varchar(128),
 
     CONSTRAINT PK_countries_country_id PRIMARY KEY(country_id)
 );
@@ -352,7 +356,7 @@ CREATE OR REPLACE FUNCTION get_unit_needed_for_purchase(getting_unit_id int) RET
     SELECT get_group_unit_needed_for_purchase((SELECT unit_group_id FROM group_id))
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, features text, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
+CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, features text, expenses real, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
     WITH default_buyability AS (
         SELECT column_default::boolean
         FROM information_schema.columns
@@ -363,7 +367,7 @@ CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_na
         FROM information_schema.columns
         WHERE (table_schema, table_name, column_name) = ('public', 'units', 'saleability')
     )
-    SELECT u.name AS unit_name, u.group_name, u.price, u.description, u.features, 
+    SELECT u.name AS unit_name, u.group_name, u.price, u.description, u.features, u.expenses,
            CASE
                WHEN u.buyability = (SELECT * FROM default_buyability) THEN NULL
                ELSE u.buyability
@@ -373,8 +377,7 @@ CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_na
                ELSE u.saleability
            END AS saleability,
            get_unit_needed_for_purchase(u.unit_id) AS needed_for_purchase
-        FROM units u
-    LEFT JOIN units_needed_for_purchase USING(unit_id)
+    FROM units u
     ORDER BY group_name NULLS FIRST;
 $$ LANGUAGE SQL;
 
@@ -387,8 +390,8 @@ CREATE OR REPLACE FUNCTION get_builds_inventory(getting_country_id int) RETURNS 
     ORDER BY group_name NULLS FIRST
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_units_inventory(getting_country_id int) RETURNS TABLE(name varchar, group_name varchar, count int, description text, features text) AS $$
-    SELECT name, group_name, count, description, features
+CREATE OR REPLACE FUNCTION get_units_inventory(getting_country_id int) RETURNS TABLE(name varchar, group_name varchar, count int, description text, features text, expenses real) AS $$
+    SELECT name, group_name, count, description, features, expenses*count as expenses
     FROM units
     JOIN units_inventory USING(unit_id)
     WHERE country_id = getting_country_id
@@ -397,11 +400,22 @@ $$ LANGUAGE SQL;
 
 
 CREATE OR REPLACE FUNCTION get_income_country(getting_country_id int) RETURNS real AS $$
-    SELECT COALESCE(SUM(income*count), 0)
-    FROM builds
-    JOIN builds_inventory USING(build_id)
-    WHERE country_id = getting_country_id
-    GROUP BY country_id
+    WITH income AS (
+        SELECT COALESCE(SUM(income*count), 0) AS income
+        FROM builds
+        JOIN builds_inventory USING(build_id)
+        WHERE country_id = getting_country_id
+        GROUP BY country_id
+    ),
+    expenses AS (
+        SELECT COALESCE(SUM(expenses*count), 0) AS expenses
+        FROM units
+        JOIN units_inventory USING(unit_id)
+        WHERE country_id = getting_country_id
+        GROUP BY country_id
+    )
+    SELECT income-expenses
+    FROM income, expenses
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION give_out_income() RETURNS void AS $$

@@ -35,3 +35,12 @@ class ParametersError(Exception):
     
     def __str__(self) -> str:
         return f'Ошибка параметров: {self.parameter}'
+
+class ThisCountryNotInAlliance(Exception):
+    name: str
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def __str__(self) -> str:
+        return f'Страна {self.name} не состоит в вашем альянсе'

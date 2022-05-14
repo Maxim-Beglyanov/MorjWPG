@@ -9,7 +9,6 @@ from Discord.Cogs.Cog import MyCog
 from Discord.Controller.Config import Config
 
 
-
 class CogConfig(MyCog):
 
     @MyCog.administrators_perm()

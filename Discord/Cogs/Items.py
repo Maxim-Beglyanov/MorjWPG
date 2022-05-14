@@ -14,7 +14,29 @@ from Discord.Controller.Items import CommandItemForm, \
 from Discord.Cogs.Cog import MyCog
 
 
-class ItemLists:
+class Lists:
+    def _cut_back_items(self, items: dict[str, str]) -> dict[str, str]:
+        items_output = {}
+        for item in items:
+            words = item.split()
+            word_index = 0
+            while len(' '.join(words)) >= 32 and word_index < len(words):
+                vowels = list(
+                        re.finditer('[уеёыаоэяиюУЕЁЫАОЭЯИЮ]', words[word_index])
+                )
+                if len(vowels) >= 2:
+                    words[word_index] = words[word_index][:vowels[1].start()]
+
+                word_index+=1
+
+            if len(word := ' '.join(words)) >= 32:
+                continue
+
+            items_output[word] = items[item]
+
+        return items_output
+
+class ItemLists(Lists):
     items: dict[str, dict[str, str]]
     buyable_items: dict[str, dict[str, str]]
     saleable_items: dict[str, dict[str, str]]
@@ -71,32 +93,25 @@ class ItemLists:
     def _get_dict_lists(self, list_: list[str]) -> dict[str, str]:
         return dict(zip(list_, list_))
 
-    def _cut_back_items(self, items: dict[str, str]) -> dict[str, str]:
-        items_output = {}
-        for item in items:
-            words = item.split()
-            word_index = 0
-            while len(' '.join(words)) >= 32 and word_index < len(words):
-                vowels = list(
-                        re.finditer('[уеёыаоэяиюУЕЁЫАОЭЯИЮ]', words[word_index])
-                )
-                if len(vowels) >= 2:
-                    words[word_index] = words[word_index][:vowels[1].start()]
-
-                word_index+=1
-
-            if len(word := ' '.join(words)) >= 32:
-                continue
-
-            items_output[word] = items[item]
-
-        return items_output
-
 g_item_lists = ItemLists()
 def item_lists() -> ItemLists:
     return g_item_lists
 
-class ItemAutocomplete:
+
+class Autocomplete:
+    def _get_same_words(self, words: dict[str, str], word: str) -> dict[str, str]:
+        word = word.lower()
+        words_output = {}
+        for same_word in words:
+            if word in same_word.lower():
+                words_output[same_word] = words[same_word]
+
+        if len(words_output) > 25:
+            words_output = {'Начни вводить название': ''}
+            
+        return words_output
+
+class ItemAutocomplete(Autocomplete):
     item_type: str
 
     def __init__(self, item_type: str):
@@ -132,18 +147,6 @@ class ItemAutocomplete:
                     item_lists().item_groups[self.item_type], group
                 )
         )
-
-    def _get_same_words(self, words: dict[str, str], word: str) -> dict[str, str]:
-        word = word.lower()
-        words_output = {}
-        for same_word in words:
-            if word in same_word.lower():
-                words_output[same_word] = words[same_word]
-
-        if len(words_output) > 25:
-            words_output = {'Начни вводить название': ''}
-            
-        return words_output
 
 g_builds_autocomplete = ItemAutocomplete('builds')
 def builds_autocomplete() -> ItemAutocomplete:
@@ -203,8 +206,6 @@ class CogItems(MyCog):
         view.msg = await inter.original_message()
 
     
-
-
     @slash_command(name='buy')
     async def buy(
             self, inter: Interaction,
@@ -391,6 +392,12 @@ class CogItems(MyCog):
                 required=False,
                 default=MISSING
             ),
+            expenses: float = SlashOption(
+                name='расходы',
+                description='Расходы, которые будет нести страна за каждого юнита',
+                required=False,
+                default=MISSING
+            ),
             group_name: str = GROUP_NAME,
             **kwargs
     ):
@@ -398,6 +405,7 @@ class CogItems(MyCog):
                 inter, self, 'unit',
                 UnitParameters(
                     features=features,
+                    expenses=expenses,
                     group_name=group_name,
                     **kwargs
                 )
@@ -516,6 +524,12 @@ class CogItems(MyCog):
                 required=False,
                 default=MISSING
             ),
+            expenses: float = SlashOption(
+                name='расходы',
+                description='Новые расходы',
+                required=False,
+                default=MISSING
+            ),
             group_name: str = GROUP_NAME,
             **kwargs
     ):
@@ -527,6 +541,7 @@ class CogItems(MyCog):
                 ), 
                 UnitParameters(
                     features=features,
+                    expenses=expenses,
                     group_name=group_name,
                     **kwargs
                 )

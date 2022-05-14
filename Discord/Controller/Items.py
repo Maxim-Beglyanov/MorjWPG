@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-import sys; sys.path.append('..')
+import sys
+
+from Service.exceptions import CantTransact; sys.path.append('..')
 from typing import Any
 
 import regex
@@ -231,12 +233,17 @@ async def buy_item(
         inter: Interaction, cog: MyCog, item_type: str, 
         item_name: str, count: int
 ):
-    item = ItemFabric().get_item(item_type)
-    country = OneCountry(cog.get_country_name(inter.user))
+    await inter.send('В процессе покупки')
+    message = await inter.original_message()
 
-    item.buy(country, item.get_id_by_concrete_name(item_name), count)
+    try:
+        item = ItemFabric().get_item(item_type)
+        country = OneCountry(cog.get_country_name(inter.user))
 
-    await cog.send(inter, 'Buy Item', 'Предмет куплен')
+        item.buy(country, item.get_id_by_concrete_name(item_name), count)
+        await message.edit('Предмет куплен')
+    except CantTransact as e:
+        await message.edit(':x: '+str(e))
 
 async def sell_item(
         inter: Interaction, cog: MyCog, item_type: str, 

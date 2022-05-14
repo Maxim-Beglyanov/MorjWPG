@@ -4,6 +4,7 @@ from nextcord import Interaction, Embed, Member, utils
 from nextcord.application_command import ApplicationCommand, ApplicationSubcommand, SlashOption
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Bot, Cog
+from Service.Country import OneCountry
 
 from default import MISSING
 from Discord.Cogs.View import Question, Pages, Confirm
@@ -141,7 +142,7 @@ class MyCog(Cog):
                 return role.name.replace(Config().country_prefix, '')
 
     @staticmethod
-    async def get_player(inter: Interaction, player: Member):
+    async def get_player(inter: Interaction, player: Member) -> Member:
         """Метод для получения пользователя
         Из команд где при неуказании пользователя, 
         подразумевается тот кто вызвал функцию
@@ -150,17 +151,25 @@ class MyCog(Cog):
 
         try:
             check_player = MyCog.check_player(inter.user)
-        except IsntRuler:
+            check_curator = MyCog.check_curator(inter.user)
+        except:
             pass
 
-        if player == MISSING and check_player:
-            return inter.user
-        elif player == MISSING and not check_player:
-            raise IsntRuler(inter.user)
+        if player == MISSING:
+            if check_player:
+                return inter.user
+            else:
+                raise IsntRuler(inter.user)
+        elif MyCog.check_player(player):
+            if check_player:
+                country = OneCountry(MyCog.get_country_name(inter.user))
+                getting_country = country.get_country(MyCog.get_country_name(player))
 
-        if MyCog.check_curator(inter.user) and MyCog.check_player(player):
-           return player
-
+                return player
+            elif check_curator:
+                return player
+            else:
+                raise IsntCurator
 
     @staticmethod
     def administrators_perm():

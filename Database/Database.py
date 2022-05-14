@@ -10,7 +10,7 @@ import psycopg2.extras
 from default import MISSING
 
 
-_CURENT_DATABASE_VERSION = 1.2
+_CURENT_DATABASE_VERSION = 1.3
 class Database(ABC):
 
     @abstractmethod
