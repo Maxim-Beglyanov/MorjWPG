@@ -54,22 +54,20 @@ CREATE OR REPLACE FUNCTION get_units_inventory(getting_country_id int) RETURNS T
     ORDER BY group_name NULLS FIRST
 $$ LANGUAGE SQL;
 
-DROP FUNCTION get_income_country;
 CREATE OR REPLACE FUNCTION get_income_country(getting_country_id int) RETURNS real AS $$
-    WITH income AS (
-        SELECT COALESCE(SUM(income*count), 0) AS income
-        FROM builds
-        JOIN builds_inventory USING(build_id)
-        WHERE country_id = getting_country_id
-        GROUP BY country_id
-    ),
-    expenses AS (
-        SELECT COALESCE(SUM(expenses*count), 0) AS expenses
-        FROM units
-        JOIN units_inventory USING(unit_id)
-        WHERE country_id = getting_country_id
-        GROUP BY country_id
-    )
-    SELECT income-expenses
-    FROM income, expenses
+    SELECT COALESCE(
+        (
+            SELECT SUM(income*count) AS income
+            FROM builds
+            JOIN builds_inventory USING(build_id)
+            WHERE country_id = getting_country_id
+            GROUP BY country_id
+        ), 0)-COALESCE(
+        (
+            SELECT SUM(expenses*count) AS expenses
+            FROM units
+            JOIN units_inventory USING(unit_id)
+            WHERE country_id = getting_country_id
+            GROUP BY country_id
+        ), 0) AS income
 $$ LANGUAGE SQL;
