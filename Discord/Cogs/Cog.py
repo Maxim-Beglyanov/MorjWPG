@@ -149,11 +149,12 @@ class MyCog(Cog):
 
         """
 
+        check_player = False
+        check_curator = False
         try:
             check_player = MyCog.check_player(inter.user)
+        except IsntRuler:
             check_curator = MyCog.check_curator(inter.user)
-        except:
-            pass
 
         if player == MISSING:
             if check_player:
@@ -168,8 +169,6 @@ class MyCog(Cog):
                 return player
             elif check_curator:
                 return player
-            else:
-                raise IsntCurator
 
     @staticmethod
     def administrators_perm():
