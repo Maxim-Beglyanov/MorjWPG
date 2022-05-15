@@ -4,7 +4,7 @@ from typing import Any
 
 from Database.Database import database
 from default import ALL
-from Service.Country import Country
+from Service.Country import Country, OneCountry
 from Service.Items import ItemFabric, Item
 
 
@@ -64,18 +64,39 @@ class Inventory(List):
             )
             countries = [country['country_id'] for country in all_countries]
 
-        values = [f'({country}, {item_id}, {count})' for country in countries]
-        values = ',\n'.join(values)
+        if count > 0:
+            values = [f'({country}, {item_id}, {count})' for country in countries]
+            values = ',\n'.join(values)
 
-        database().insert(
-                f'INSERT INTO {self.item.table_name}_inventory'
-                f'(country_id, {self.item.arguments_name}_id, count) '
-                f'VALUES{values} '
-                f'ON CONFLICT(country_id, {self.item.arguments_name}_id) DO UPDATE '
-                f'SET count = {self.item.table_name}_inventory.count+%s', 
-                count
-        )
-    
+            database().insert(
+                    f'INSERT INTO {self.item.table_name}_inventory'
+                    f'(country_id, {self.item.arguments_name}_id, count) '
+                    f'VALUES{values} '
+                    f'ON CONFLICT(country_id, {self.item.arguments_name}_id) DO UPDATE '
+                    f'SET count = count + %s', 
+                    count
+            )
+        else:
+            for country_item in database().select(
+                    'SELECT country_id, count '
+                   f'FROM {self.item.table_name}_inventory '
+                   f'WHERE country_id IN %s AND {self.item.arguments_name}_id = %s',
+                    countries, item_id
+            ):
+                if abs(count) >= country_item['count']:
+                    database().insert(
+                           f'DELETE FROM {self.item.table_name}_inventory '
+                           f'WHERE country_id = %s AND {self.item.arguments_name}_id = %s',
+                            country_item['country_id'], item_id
+                    )
+                else:
+                    database().insert(
+                           f'UPDATE {self.item.table_name}_inventory '
+                            'SET count = count + %s '
+                           f'WHERE country_id = %s AND {self.item.arguments_name}_id = %s',
+                            count, country_item['country_id'], item_id
+                    )
+
     def delete_inventory_item(self, item_id: int):
         if self.country.count != ALL_COUNTRIES:
             country_where = [str(country_id) for country_id in self.country.ids]
