@@ -162,6 +162,7 @@ class MyCog(Cog):
             else:
                 raise IsntRuler(inter.user)
         elif MyCog.check_player(player):
+
             if check_player:
                 country = OneCountry(MyCog.get_country_name(inter.user))
                 getting_country = country.get_country(MyCog.get_country_name(player))
@@ -169,6 +170,7 @@ class MyCog(Cog):
                 return player
             elif check_curator:
                 return player
+            
 
     @staticmethod
     def administrators_perm():

@@ -73,7 +73,7 @@ class Inventory(List):
                     f'(country_id, {self.item.arguments_name}_id, count) '
                     f'VALUES{values} '
                     f'ON CONFLICT(country_id, {self.item.arguments_name}_id) DO UPDATE '
-                    f'SET count = count + %s', 
+                    f'SET count = {self.item.table_name}_inventory.count + %s', 
                     count
             )
         else:
