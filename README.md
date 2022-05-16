@@ -47,7 +47,7 @@
 ## Пример работы бота
 ![MorjWPG_example2](https://user-images.githubusercontent.com/58074318/168578390-d1648622-eea4-4df6-b0da-c4f1512faa61.gif)
 
-## [Как задеплоить бота](Doc/'Как задеплоить бота'.md)
+# [Как задеплоить бота](Doc/How_To_Deploy.md)
 
 ## Как со мной связаться?
 
