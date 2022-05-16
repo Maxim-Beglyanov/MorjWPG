@@ -44,6 +44,9 @@
 
 Также, чтобы было удобнее просматривать магазин и инвентарь, предметы можно разделять на категории.
 
+## Пример работы бота
+![MorjWPG_example2](https://user-images.githubusercontent.com/58074318/168578390-d1648622-eea4-4df6-b0da-c4f1512faa61.gif)
+
 ## Как со мной связаться?
 
 Вы можете написать мне в Discord(Mega_Salo#7157) или <a href="https://t.me/MegaSalo">Telegram</a>
