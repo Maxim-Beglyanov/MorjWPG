@@ -12,6 +12,8 @@ Heroku CLI:
 - https://www.youtube.com/watch?v=fpEgZi3_RI4&ab_channel=Fraser
 - https://www.youtube.com/watch?v=3eep8apTnGA&ab_channel=CodeJava
 
+## Деплой
+
 1. Зарегистрируйтесь на Heroku, для этого вам нужна будет почта, на данный момент хостинг не принимает Российские и Белорусские почты, поэтому создайте с Английским регионом или с любым другим
 2. Создайте проект в dashboard Heroku
 После создания аккаунта вы попадете в dashboard, в нем вам необходимо создать новый проект
