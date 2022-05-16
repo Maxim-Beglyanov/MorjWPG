@@ -47,8 +47,10 @@
 ## Пример работы бота
 ![MorjWPG_example2](https://user-images.githubusercontent.com/58074318/168578390-d1648622-eea4-4df6-b0da-c4f1512faa61.gif)
 
+## [Как задеплоить бота](Doc/'Как задеплоить бота'.md)
+
 ## Как со мной связаться?
 
-Вы можете написать мне в Discord(Mega_Salo#7157) или <a href="https://t.me/MegaSalo">Telegram</a>
+Вы можете написать мне в Discord(Mega_Salo#7157) или [Telegram](https://t.me/MegaSalo)
 
-Также для бота создан <a href="https://discord.gg/3vztcd5nSW">сервер в Discord</a> куда вы можете присодиниться и посмотреть на работу бота или задать возникшие вопросы
+Также для бота создан [сервер в Discord](https://discord.gg/3vztcd5nSW) куда вы можете присодиниться и посмотреть на работу бота или задать возникшие вопросы
