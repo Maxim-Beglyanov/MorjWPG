@@ -1,140 +1,185 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
-
 from abc import abstractmethod
-from Service.exceptions import ThisCountryNotInAlliance
+import asyncio
+from typing import Iterable
+
+from Service.exceptions import CountryNotInAllianceError, GetCountryError
 from default import ALL, MISSING
-from Database.Database import database
+from Database.Database import select, select_one, insert, init
 
 
 ALL_COUNTRIES = ALL
 
 class Country:
-    """Интерфейс страны 
+    count: int
+    ids: tuple[int]
+    where: str
 
-    Страны должны выдавать информацию о себе для обращения к БД
-
-    """
-
-    _count: int
-    _ids: tuple[int]
-    _where: str
-
-    @property
-    def count(self) -> int:
-        return self._count
-    @property
-    def ids(self) -> tuple[int]:
-        return self._ids
-    @property
-    def where(self) -> str:
-        return self._where
-
-    def delete(self):
-        database().insert(
-            ''.join(
-                ('DELETE FROM countries ', self.where)
-            )
-        )
+    async def delete(self):
+        await insert('DELETE FROM countries '+self.where)
 
     @abstractmethod
     def get_alliance(self):
         pass
 
-    def delete_alliance(self):
-        database().insert(
-                ''.join((
-                    'UPDATE countries ',
-                    'SET alliance = NULL ',
-                    self.where
-                ))
+    async def delete_alliance(self):
+        await insert(''.join((
+                'UPDATE countries ',
+                'SET alliance = NULL ',
+                self.where
+            ))
         )
+
+class Alliance:
+    name: str
+    members: list[str]
+
+    @classmethod
+    async def create(cls, name: str):
+        self = Alliance()
+        self.name = name
+        self.members = await self.__get_members()
+
+        return self
+
+    async def __get_members(self) -> list[str]:
+        members = await select(
+                'SELECT name '
+                'FROM countries '
+                'WHERE alliance = $1',
+                self.name
+        )
+        members = [member['name'] for member in members]
+
+        return members
+
+
+    async def add_country(self, country: Country):
+        assert country.count != ALL_COUNTRIES
+
+        await insert(
+                'UPDATE countries '
+                'SET alliance = $1 '
+                'WHERE country_id = ANY($2)',
+                self.name, country.ids
+        )
+        self.members = await self.__get_members()
+
+    async def rename(self, new_name: str):
+        await insert(
+                'UPDATE countries '
+                'SET alliance = $1 '
+                'WHERE alliance = $2',
+                new_name, self.name
+        )
+        self.name = new_name
+
+    async def delete(self):
+        await insert(
+                'UPDATE countries '
+                'SET alliance = NULL '
+                'WHERE alliance = $1',
+                self.name
+        )
+        self.members = []
 
 
 class OneCountry(Country):
-    _count: int = 1
-    _ids: tuple[int]
-    _where: str
+    count: int = 1
+    ids: tuple[int]
+    where: str
+    
+    @classmethod
+    async def create(cls, name: str):
+        self = OneCountry()
+        self.ids = (await self.__get_country_id(name), )
+        self.where = f'WHERE country_id = {self.ids[0]}'
 
-    def __init__(self, name: str):
-        if not (country_ids := database().select_one(
+        return self
+    
+    async def __get_country_id(self, name: str) -> int:
+        if not (country_id := await select_one(
                 'SELECT country_id '
                 'FROM countries '
-                'WHERE name = %s',
+                'WHERE name = $1',
                 name
         )):
-            country_ids = database().select_one(
+            country_id = await select_one(
                     'INSERT INTO countries(name) '
-                    'VALUES(%s) ' 
+                    'VALUES($1) ' 
                     'RETURNING country_id', 
                     name
             )
+        
+        return country_id
 
-        self._ids = (country_ids['country_id'], )
-        self._where = f'WHERE country_id = {self.ids[0]}'
+    
+    async def get_alliance(self) -> Alliance:
+        if alliance := await self.__get_alliance_name():
+            alliance = await Alliance.create(alliance)
+            return alliance
+        else:
+            raise CountryNotInAllianceError
 
-
-    def get_alliance(self) -> tuple[str, list[str]]:
-        alliance = self.__get_alliance_name()
-        alliance_members = []
-        if alliance:
-            for country in database().select(
-                    'SELECT name '
-                    'FROM countries '
-                    'WHERE alliance = %s',
-                    alliance
-            ):
-                alliance_members.append(country['name'])
-
-        return alliance, alliance_members
-
-    def __get_alliance_name(self) -> str:
-        alliance = database().select_one(
+    async def __get_alliance_name(self) -> str | None:
+        alliance = await select_one(
                 'SELECT alliance '
                 'FROM countries '
-                'WHERE country_id = %s',
+                'WHERE country_id = $1',
                 self.ids[0]
-        )['alliance']
+        )
 
         return alliance
 
-    def add_alliance(self, name: str):
-        database().insert(
-                'UPDATE countries '
-                'SET alliance = %s '
-                'WHERE country_id = %s',
-                name, self.ids[0]
+
+    async def get_country(self, name: str) -> Country:
+        """Метод для получения страны страной"""
+        if await self.__country_is_getting_country(name) or \
+           await self.__getting_country_in_alliance(name):
+               return await OneCountry.create(name)
+        else:
+            raise GetCountryError
+
+    async def __country_is_getting_country(self, name: str) -> bool:
+        return name == await select_one(
+                'SELECT name '
+                'FROM countries '
+                'WHERE country_id = $1',
+                self.ids[0]
         )
 
-
-    def get_country(self, name: str) -> Country:
-        """Метод для получения страны страной"""
-        _, alliance_members = self.get_alliance()
-
-        if name in alliance_members or \
-           name == database().select_one(
-                   'SELECT name '
-                   'FROM countries '
-                   'WHERE country_id = %s',
-                   self.ids[0]
-            ):
-               return OneCountry(name)
-        else:
-            raise ThisCountryNotInAlliance(name)
+    async def __getting_country_in_alliance(self, name: str) -> bool:
+        return name in (await self.get_alliance()).members
         
 
 class AllCountries(Country):
-    _count: int = ALL_COUNTRIES
-    _ids: tuple[int] = MISSING
-    _where: str = ''
+    count: int = ALL_COUNTRIES
+    ids: None = MISSING
+    where: str = ''
 
-    def get_alliance(self) -> list[str]:
+    async def get_alliance(self) -> Iterable[Alliance]:
         alliances = []
-        for alliance in database().select(
+        for alliance in await select(
                 'SELECT DISTINCT alliance '
                 'FROM countries '
                 'WHERE alliance IS NOT NULL'
         ):
-            alliances.append(alliance['alliance'])
+            alliances.append(await Alliance.create(alliance['alliance']))
 
         return alliances
+
+
+async def main():
+    await init()
+    russia = await OneCountry.create('Russia')
+    germany = await OneCountry.create('Germany')
+
+    alliance = await Alliance.create('Ja')
+    await alliance.add_country(russia)
+    await alliance.add_country(germany)
+
+    germany = await russia.get_country('Germany')
+
+if __name__ == '__main__':
+    asyncio.run(main())

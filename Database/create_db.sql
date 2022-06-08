@@ -202,6 +202,40 @@ CREATE TABLE config(
     database_version float
 );
 
+--
+-- Создаем триггеры
+--
+
+CREATE OR REPLACE FUNCTION delete_inventory_build_if_less_zero() RETURNS trigger AS $$
+BEGIN 
+    IF NEW.count <= 0 THEN
+        DELETE FROM builds_inventory
+        WHERE build_id = NEW.build_id AND country_id = NEW.country_id;
+        RETURN NULL;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION delete_inventory_unit_if_less_zero() RETURNS trigger AS $$
+BEGIN 
+    IF NEW.count <= 0 THEN
+        DELETE FROM units_inventory
+        WHERE unti_id = NEW.unit_id AND country_id = NEW.country_id;
+        RETURN NULL;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER delete_inventory_build BEFORE UPDATE ON builds_inventory
+    FOR EACH ROW EXECUTE PROCEDURE delete_inventory_build_if_less_zero();
+
+CREATE TRIGGER delete_inventory_unit BEFORE UPDATE ON units_inventory
+    FOR EACH ROW EXECUTE PROCEDURE delete_inventory_unit_if_less_zero();
+
 -- 
 -- Создаем функции
 --
@@ -267,7 +301,7 @@ CREATE OR REPLACE FUNCTION get_build_needed_for_purchase(getting_build_id int) R
 $$ LANGUAGE SQL;
 
 
-CREATE OR REPLACE FUNCTION get_builds_shop() RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, income real, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
+CREATE OR REPLACE FUNCTION get_build(getting_build_id int) RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, income real, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
     WITH default_buyability AS (
         SELECT column_default::boolean
         FROM information_schema.columns
@@ -293,7 +327,7 @@ CREATE OR REPLACE FUNCTION get_builds_shop() RETURNS TABLE(name varchar, group_n
            END AS saleability,
            get_build_needed_for_purchase(b.build_id) AS needed_for_purchase
     FROM builds b
-    ORDER BY group_name NULLS FIRST;
+    WHERE build_id = getting_build_id;
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION get_unit_group_needed_for_purchase(group_id int) RETURNS varchar AS $$
@@ -356,7 +390,7 @@ CREATE OR REPLACE FUNCTION get_unit_needed_for_purchase(getting_unit_id int) RET
     SELECT get_group_unit_needed_for_purchase((SELECT unit_group_id FROM group_id))
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, features text, expenses real, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
+CREATE OR REPLACE FUNCTION get_unit(getting_unit_id int) RETURNS TABLE(name varchar, group_name varchar, price item_price, description text, features text, expenses real, buyability boolean, saleability boolean, needed_for_purchase varchar) AS $$
     WITH default_buyability AS (
         SELECT column_default::boolean
         FROM information_schema.columns
@@ -378,7 +412,7 @@ CREATE OR REPLACE FUNCTION get_units_shop() RETURNS TABLE(name varchar, group_na
            END AS saleability,
            get_unit_needed_for_purchase(u.unit_id) AS needed_for_purchase
     FROM units u
-    ORDER BY group_name NULLS FIRST;
+    WHERE unit_id = getting_unit_id;
 $$ LANGUAGE SQL;
 
 
