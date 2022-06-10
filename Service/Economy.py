@@ -1,134 +1,133 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
+import asyncio
 from typing import Any
 
-from psycopg2._psycopg import cursor
-
-from Database.Database import database
-from Service.Country import Country
+from Database.Database import init, insert, select, select_one, connection
+from Service.Country import AllCountries, Country, OneCountry
 from Service.Transaction import Transaction
 
 
+async def money(country: Country) -> float:
+    assert country.count == 1
+
+    money = await select_one(
+            'SELECT money '
+            'FROM countries '
+            'WHERE country_id = $1',
+            country.ids[0]
+    )
+    return money
+
+async def income(country: Country) -> float:
+    assert country.count == 1
+
+    income = await select_one(
+            'SELECT COALESCE(get_income_country(%s), 0)',
+            country.ids[0]
+    )
+    return income
+
+
 class Pay(Transaction):
-    """Операция перевода денег от одной страны к другой"""
+    pay_ability: bool
+    needed_for_pay: dict[str, Any]
 
-    __pay_ability: bool
-    __needed_for_pay: dict[str, Any]
-
-    __new_transfer_money: float
-
-    def __init__(
-            self, 
-            country_transfer: Country, country_payee: Country, 
-            money: int|float
+    @classmethod
+    async def create(
+            cls, country_transfer: Country, country_payee: Country,
+            money: int | float
     ):
-        super().__init__(country_transfer, country_payee, money)
+        self = Pay()
+        await super().create(self, country_transfer, country_payee, money)
 
-
-    def _check_transact_ability(
-            self, cur: cursor, 
+    transact_ability = bool
+    needed_for_transact = dict[str, Any]
+    async def _check_transact_ability(
+            self, conn: connection, 
             country_transfer: Country, country_payee: Country, 
-            money: int|float
-    ):
+            money: int | float
+    ) -> (transact_ability, needed_for_transact):
         assert country_transfer.count == 1 and country_payee.count == 1
+        assert money > 0
 
         self.__pay_ability = True
         self.__needed_for_pay = {}
 
-        self.__check_money(cur, country_transfer, money)
+        await self.__check_money(conn, country_transfer, money)
 
         return self.__pay_ability, self.__needed_for_pay
        
-    def __check_money(
-            self, cur: cursor, 
-            checking_country: Country, 
-            money: int|float
+    async def __check_money(
+            self, conn: connection, 
+            country_transfer: Country, 
+            money: int | float
     ):
-        cur.execute(
-                'SELECT get_needed_money(%s, %s)',
-                (checking_country.ids[0], money)
-        )
-                
-        self.__new_transfer_money = cur.fetchone()[0]
-        if self.__new_transfer_money < 0.0:
-            self.__pay_ability = False
-            self.__needed_for_pay['money'] = self.__new_transfer_money
-
-
-    def _transact(
-            self, cur: cursor, 
-            country_transfer: Country, country_payee: Country, 
-            money: int|float
-    ):
-        self.__write_off_transfer_money(cur, country_transfer)
-        self.__give_payee_money(cur, country_payee, money)
-        
-    def __write_off_transfer_money(
-            self, cur: cursor, 
-            country_transfer: Country,
-    ):
-        cur.execute(
-                'UPDATE countries '
-                'SET money = %s '
-                'WHERE country_id = %s',
-                (self.__new_transfer_money, country_transfer.ids[0])
-        )
-
-    def __give_payee_money(
-            self, cur: cursor,
-            country_payee: Country,
-            money: int|float
-    ):
-        cur.execute(
-                'UPDATE countries '
-                'SET money = money + %s '
-                'WHERE country_id = %s',
-                (money, country_payee.ids[0])
-        )
-
-
-class Economy:
-    """Класс экономики страны"""
-
-    country: Country
-
-    def __init__(self, country: Country):
-        self.country = country
-
-    @property
-    def money(self) -> float:
-        assert self.country.count == 1
-
-        return database().select_one(
+        transfer_money = await conn.fetchval(
                 'SELECT money '
                 'FROM countries '
-               f'{self.country.where}'
-        )['money']
-
-    @property
-    def income(self) -> float:
-        assert self.country.count == 1
-
-        return database().select_one(
-                'SELECT COALESCE(get_income_country(%s), 0) AS income',
-                self.country.ids[0]
-        )['income']
+                'WHERE country_id = $1',
+                country_transfer.ids[0]
+        )
+                
+        if transfer_money < money:
+            self.__pay_ability = False
+            self.__needed_for_pay['money'] = transfer_money-money
 
 
-    def pay(self, country_payee: Country, money: int|float):
-        Pay(self.country, country_payee, money)
-
-    def edit_money(self, money: int|float):
-        database().insert(
+    async def _transact(
+            self, conn: connection, 
+            country_transfer: Country, country_payee: Country, 
+            money: int | float
+    ):
+        await self.__write_off_transfer_money(conn, country_transfer, money)
+        await self.__give_payee_money(conn, country_payee, money)
+        
+    async def __write_off_transfer_money(
+            self, conn: connection, country_transfer: Country, money: int | float
+    ):
+        await conn.execute(
                 'UPDATE countries '
-                'SET money = money + %s '
-               f'{self.country.where}', 
-                money
+                'SET money = money - $1 '
+                'WHERE country_id = $2',
+                money, country_transfer.ids[0]
         )
 
-    def delete_money(self):
-        database().insert(
+    async def __give_payee_money(
+            self, conn: connection, country_payee: Country, money: int | float
+    ):
+        await conn.execute(
                 'UPDATE countries '
-                'SET money = 0 '
-               f'{self.country.where}'
+                'SET money = money + $1 '
+                'WHERE country_id = $2',
+                money, country_payee.ids[0]
         )
+
+async def pay(
+        country_transfer: Country, country_payee: Country, 
+        money: int | float
+):
+    await Pay.create(country_transfer, country_payee, money)
+
+
+async def edit_money(country: Country, money: int | float):
+    await insert(
+            'UPDATE countries '
+            'SET money = money + $1 '
+           f'{country.where}', 
+            money
+    )
+
+async def delete_money(country: Country):
+    await insert(
+            'UPDATE countries '
+            'SET money = 0 '
+           f'{country.where}'
+    )
+
+
+async def main():
+    await init()
+
+if __name__ == '__main__':
+    asyncio.run(main())

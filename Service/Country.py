@@ -1,6 +1,5 @@
 if __name__ == '__main__':
     import sys; sys.path.append('..')
-from abc import abstractmethod
 import asyncio
 from typing import Iterable
 
@@ -19,9 +18,8 @@ class Country:
     async def delete(self):
         await insert('DELETE FROM countries '+self.where)
 
-    @abstractmethod
     def get_alliance(self):
-        pass
+        raise NotImplementedError
 
     async def delete_alliance(self):
         await insert(''.join((

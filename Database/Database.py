@@ -89,3 +89,6 @@ async def init():
 
     await check_db_exists()
     await check_db_updates()
+
+if __name__ == '__main__':
+    asyncio.run(init())

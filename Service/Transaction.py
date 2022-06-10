@@ -1,37 +1,34 @@
-from abc import ABC, abstractmethod
 from typing import Any
 
-from Database.Database import database
-from Service.exceptions import CantTransact
+from Database.Database import get_conn, put_conn
+from Service.exceptions import TransactError
 
 
-class Transaction(ABC):
+class Transaction:
     """Класс транзакции, который состоит из 
     проверки возможности транзакции и выполнения транзакции
 
     """
 
-    def __init__(self, *args):
-        conn = database().get_conn()
-
+    @classmethod
+    async def create(cls, self, *args):
+        conn = await get_conn()
         try:
-            conn.set_isolation_level('READ COMMITTED')
-            with conn:
-                with conn.cursor() as cur:
-                    transact_ability, needed_for_transact = \
-                            self._check_transact_ability(cur, *args)
+            async with conn.transaction(isolation='read_committed'):
+                transact_ability, needed_for_transact = \
+                        await self._check_transact_ability(conn, *args)
 
-                    if transact_ability:
-                        self._transact(cur, *args)
-                    else:
-                        raise CantTransact(needed_for_transact)
+                if transact_ability:
+                    await self._transact(conn, *args)
+                else:
+                    raise TransactError(needed_for_transact)
         finally:
-            database().put_conn(conn)
+            await put_conn(conn)
 
-    @abstractmethod
-    def _check_transact_ability(self, *args) -> tuple[bool, dict[str, Any]]:
-        pass
+    transact_ability = bool
+    needed_for_transact = dict[str, Any]
+    async def _check_transact_ability(self, *args) -> (transact_ability, needed_for_transact):
+        raise NotImplementedError
 
-    @abstractmethod
-    def _transact(self, *args):
-        pass
+    async def _transact(self, *args):
+        raise NotImplementedError
